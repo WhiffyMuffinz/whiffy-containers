@@ -5,9 +5,9 @@ set -euo pipefail
 ZIMG_VERSION="${ZIMG_VERSION:-release-3.0.5}"
 VAPOURSYNTH_VERSION="${VAPOURSYNTH_VERSION:-R70}"
 AV1AN_VERSION="${AV1AN_VERSION:-master}"
-LSMASH_VERSION="${LSMASH_VERSION:-v2.14.5}"
-LSMASH_WORKS_VERSION="${LSMASH_WORKS_VERSION:-a090a57}"
 BESTSOURCE_VERSION="${BESTSOURCE_VERSION:-R8}"
+VSHIP_VERSION="${VSHIP_VERSION:-v4.0.0}"
+ZIG_VERSION="${ZIG_VERSION:-0.15.2}"
 
 WORK_DIR="/tmp/av1an-source"
 TARGET_DIR="/usr/local"
@@ -16,10 +16,9 @@ TARGET_DIR="/usr/local"
 ZIMG_REPO="https://github.com/sekrit-twc/zimg.git"
 VASynth_REPO="https://github.com/vapoursynth/vapoursynth.git"
 AV1AN_REPO="https://github.com/master-of-zen/Av1an.git"
-LSMASH_REPO="https://github.com/l-smash/l-smash.git"
-LSMASH_WORKS_REPO="https://github.com/HomeOfAviSynthPlusEvolution/L-SMASH-Works.git"
 VS_ZIP_REPO="https://github.com/dnjulek/vapoursynth-zip"
 BESTSOURCE_REPO="https://github.com/vapoursynth/bestsource.git"
+VSHIP_REPO="https://github.com/Line-fr/Vship.git"
 
 log() { echo "[INFO]  $*"; }
 
@@ -50,7 +49,9 @@ install_deps() {
     ninja-build \
     wget \
     jq \
-    git
+    git \
+    cmake \
+    libffms2-dev
 }
 
 build_zimg() {
@@ -93,31 +94,6 @@ build_vapoursynth() {
   fi
 }
 
-build_lsmash() {
-    log "Building lsmash ${LSMASH_VERSION}"
-    git clone "$LSMASH_REPO" "$WORK_DIR/lsmash"
-    cd "$WORK_DIR/lsmash"
-    git checkout "$LSMASH_VERSION"
-    ./configure --prefix=/usr --enable-shared --disable-static
-    make -j$(nproc)
-    make install
-    ldconfig
-}
-
-build_lsmash_works() {
-    log "Building lsmash-works ${LSMASH_WORKS_VERSION}"
-    git clone --recurse-submodules --shallow-submodules --remote-submodules "$LSMASH_WORKS_REPO" "$WORK_DIR/lsmash-works"
-    cd "$WORK_DIR/lsmash-works/VapourSynth"
-    git reset --hard "$LSMASH_WORKS_VERSION"
-    mkdir build && cd build
-    meson .. \
-      --prefix=/usr \
-      --libdir=/usr/local/lib/vapoursynth
-    ninja -j$(nproc)
-    ninja install
-    ldconfig
-}
-
 build_bestsource() {
   log "Building bestsource ${BESTSOURCE_VERSION}"
   git clone "$BESTSOURCE_REPO" "$WORK_DIR/bestsource" --recurse-submodules --shallow-submodules --remote-submodules
@@ -131,10 +107,12 @@ build_bestsource() {
 install_ssim2() {
   log "Installing cpu ssim2"
   git clone "$VS_ZIP_REPO" "$WORK_DIR/vapoursynth-zip"
-  cd "$WORK_DIR/vapoursynth-zip/build-help"
+  cd "$WORK_DIR/vapoursynth-zip"
+  git checkout R10
+  cd build-help
   
-  ZNAME="zig-x86_64-linux-0.14.1"
-  wget "https://ziglang.org/download/0.14.1/zig-x86_64-linux-0.14.1.tar.xz"
+  ZNAME="zig-x86_64-linux-${ZIG_VERSION}"
+  wget "https://ziglang.org/download/${ZIG_VERSION}/${ZNAME}.tar.xz"
   tar -xf "${ZNAME}.tar.xz"
   
   cd ..
@@ -142,6 +120,19 @@ install_ssim2() {
   
   mkdir -p /usr/local/lib/vapoursynth
   cp zig-out/lib/libvszip.so /usr/local/lib/vapoursynth
+}
+
+install_vship() {
+  log "Installing Vship (GPU SSIM2) ${VSHIP_VERSION}"
+  git clone "$VSHIP_REPO" "$WORK_DIR/Vship"
+  cd "$WORK_DIR/Vship"
+  git checkout "$VSHIP_VERSION"
+  
+  make buildFFVSHIPcudaall
+  
+  mkdir -p /usr/local/lib/vapoursynth
+  find . -name "*.so" -exec cp {} /usr/local/lib/vapoursynth/ \;
+  log "Vship installed"
 }
 
 install_rust() {
@@ -171,9 +162,8 @@ main() {
   build_zimg
   build_vapoursynth
   build_bestsource
-  # build_lsmash # Commented out in original script, keeping it that way unless requested
-  # build_lsmash_works # Commented out in original script
   install_ssim2
+  install_vship
   install_rust
   build_av1an
   
