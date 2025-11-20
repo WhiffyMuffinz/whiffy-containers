@@ -17,8 +17,11 @@ ARG FFMPEG_BTBN_VERSION=latest
 
 # Install build dependencies
 RUN apt-get update && \
-    apt-get install -y sudo tzdata wget ca-certificates gnupg curl tar xz-utils zstd libssl-dev apt-transport-https openssl locales libfontconfig1 libfreetype6 pciutils vainfo git cmake libffms2-dev && \
+    apt-get install -y sudo tzdata wget ca-certificates gnupg curl tar xz-utils zstd libssl-dev apt-transport-https openssl locales libfontconfig1 libfreetype6 pciutils vainfo git cmake libffms2-dev \
+    build-essential autoconf automake libtool pkg-config nasm meson ninja-build python3-dev python3-venv python3-setuptools libavformat-dev libavfilter-dev libavdevice-dev libavcodec-dev libswscale-dev libxxhash-dev && \
     rm -rf /var/lib/apt/lists/*
+
+ENV PKG_CONFIG_PATH="/usr/local/lib/pkgconfig"
 
 # Install BtbN FFmpeg (Static Build) - Download here to copy later
 RUN mkdir -p /opt/ffmpeg-static && \
@@ -30,8 +33,9 @@ RUN mkdir -p /opt/ffmpeg-static && \
     wget -qO- "$FFMPEG_URL" | tar -xJ -C /opt/ffmpeg-static --strip-components=1
 
 # Install ab-av1
-RUN curl -L "https://github.com/alexheretic/ab-av1/releases/download/${AB_AV1_VERSION}/ab-av1-${AB_AV1_VERSION}-x86_64-unknown-linux-musl.tar.zst" | \
-    tar --use-compress-program=unzstd -xvf - -C /usr/local/bin ab-av1
+RUN curl -L -o /tmp/ab-av1.tar.zst "https://github.com/alexheretic/ab-av1/releases/download/${AB_AV1_VERSION}/ab-av1-${AB_AV1_VERSION}-x86_64-unknown-linux-musl.tar.zst" && \
+    tar --use-compress-program=unzstd -xvf /tmp/ab-av1.tar.zst -C /usr/local/bin ab-av1 && \
+    rm /tmp/ab-av1.tar.zst
 
 # Install dovi_tool
 RUN curl -L "https://github.com/quietvoid/dovi_tool/releases/download/${DOVI_TOOL_VERSION}/dovi_tool-${DOVI_TOOL_VERSION}-x86_64-unknown-linux-musl.tar.gz" | \
@@ -54,10 +58,8 @@ RUN git clone https://github.com/sekrit-twc/zimg.git /tmp/zimg && \
     rm -rf /tmp/zimg
 
 # Build VapourSynth
-RUN apt-get update && apt-get install -y python3-venv python3-dev python3-setuptools && \
-    python3 -m venv /tmp/venv && \
-    . /tmp/venv/bin/activate && \
-    pip install -U cython && \
+RUN apt-get update && apt-get install -y python3-dev python3-setuptools python3-pip && \
+    pip install -U cython --break-system-packages && \
     git clone https://github.com/vapoursynth/vapoursynth.git /tmp/vapoursynth && \
     cd /tmp/vapoursynth && \
     git checkout ${VAPOURSYNTH_VERSION} && \
@@ -66,18 +68,17 @@ RUN apt-get update && apt-get install -y python3-venv python3-dev python3-setupt
     make -j$(nproc) && \
     make install && \
     ldconfig && \
-    deactivate && \
     cd /tmp/vapoursynth && \
-    python3 setup.py install && \
+    pip install . --break-system-packages && \
     ldconfig && \
     if [ ! -f /usr/lib/libvapoursynth.so ] && [ -f /usr/local/lib/libvapoursynth.so ]; then ln -sf /usr/local/lib/libvapoursynth* /usr/lib/; fi && \
-    rm -rf /tmp/vapoursynth /tmp/venv
+    rm -rf /tmp/vapoursynth
 
 # Build BestSource
 RUN git clone https://github.com/vapoursynth/bestsource.git /tmp/bestsource --recurse-submodules --shallow-submodules --remote-submodules && \
     cd /tmp/bestsource && \
     git checkout ${BESTSOURCE_VERSION} && \
-    meson setup build && \
+    meson setup build || (cat build/meson-logs/meson-log.txt && exit 1) && \
     ninja -C build && \
     ninja -C build install && \
     rm -rf /tmp/bestsource
@@ -100,7 +101,7 @@ RUN git clone https://github.com/dnjulek/vapoursynth-zip /tmp/vapoursynth-zip &&
 RUN git clone https://github.com/Line-fr/Vship.git /tmp/Vship && \
     cd /tmp/Vship && \
     git checkout ${VSHIP_VERSION} && \
-    make buildFFVSHIPcudaall && \
+    make buildcudaall && \
     mkdir -p /usr/local/lib/vapoursynth && \
     find . -name "*.so" -exec cp {} /usr/local/lib/vapoursynth/ \; && \
     rm -rf /tmp/Vship
@@ -125,6 +126,8 @@ ARG DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && \
     apt-get install -y sudo tzdata wget ca-certificates gnupg curl tar xz-utils zstd libssl-dev apt-transport-https openssl locales libfontconfig1 libfreetype6 pciutils vainfo \
     python3 python3-pip libffms2-5 libgomp1 rar unrar imagemagick && \
+    mkdir -p /usr/local/lib/vapoursynth && \
+    ln -s /usr/lib/x86_64-linux-gnu/libffms2.so.5 /usr/local/lib/vapoursynth/libffms2.so && \
     rm -rf /var/lib/apt/lists/*
 
 # Install .NET 8
