@@ -1,0 +1,38 @@
+FROM ubuntu:24.04
+
+ARG DEBIAN_FRONTEND=noninteractive
+
+# Install required packages
+RUN apt-get update && \
+    apt-get install -y sudo tzdata wget ca-certificates gnupg curl tar xz-utils libssl-dev apt-transport-https openssl locales libfontconfig1 libfreetype6 pciutils vainfo git
+
+# Install .NET 8
+RUN wget https://dot.net/v1/dotnet-install.sh && \
+    bash dotnet-install.sh -c 8.0 --install-dir /dotnet && \
+    rm -f dotnet-install.sh && \
+    chmod 775 /dotnet
+
+# Install Docker CLI
+RUN curl -fsSL https://get.docker.com | sh
+
+# Set environment variables
+ENV NVIDIA_DRIVER_CAPABILITIES=compute,video,utility
+ENV NVIDIA_VISIBLE_DEVICES=all
+ENV DOTNET_ROOT=/dotnet
+ENV DOTNET_CLI_TELEMETRY_OPTOUT=true
+ENV PATH=/dotnet:/dotnet/tools:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+# Copy application code
+COPY /deploy /app
+
+# Make entrypoint script executable
+RUN chmod +x /app/docker-entrypoint.sh
+
+# Expose port
+EXPOSE 5000/tcp
+
+# Set working directory
+WORKDIR /app
+
+# Set entrypoint
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
