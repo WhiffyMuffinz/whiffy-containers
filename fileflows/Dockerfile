@@ -125,7 +125,7 @@ ARG DEBIAN_FRONTEND=noninteractive
 # Install runtime packages
 RUN apt-get update && \
     apt-get install -y sudo tzdata wget ca-certificates gnupg curl tar xz-utils zstd libssl-dev apt-transport-https openssl locales libfontconfig1 libfreetype6 pciutils vainfo \
-    python3 python3-pip libffms2-5 libgomp1 rar unrar imagemagick && \
+    python3 python3-pip libffms2-5 libgomp1 rar unrar imagemagick mkvtoolnix && \
     mkdir -p /usr/local/lib/vapoursynth && \
     ln -s /usr/lib/x86_64-linux-gnu/libffms2.so.5 /usr/local/lib/vapoursynth/libffms2.so && \
     rm -rf /var/lib/apt/lists/*
@@ -150,6 +150,7 @@ COPY --from=builder /opt/ffmpeg-static /opt/ffmpeg-static
 COPY --from=builder /usr/local/bin/ab-av1 /usr/local/bin/ab-av1
 COPY --from=builder /usr/local/bin/dovi_tool /usr/local/bin/dovi_tool
 COPY --from=builder /usr/local/bin/av1an /usr/local/bin/av1an
+COPY --from=builder /usr/local/bin/vspipe /usr/local/bin/vspipe
 # Copy compiled libraries (VapourSynth, Zimg, plugins)
 COPY --from=builder /usr/local/lib /usr/local/lib
 # Copy Python packages (VapourSynth bindings)
