@@ -1,0 +1,16 @@
+name: Build Fileflows Container
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "fileflows/**"
+  workflow_dispatch:
+
+jobs:
+  call-build-workflow:
+    uses: ./.github/workflows/build.yaml
+    with:
+      container: "fileflows"
+      push_on_main: true
+    secrets: inherit

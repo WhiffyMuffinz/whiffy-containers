@@ -1,0 +1,52 @@
+name: Build and Push to GHCR
+
+on:
+  workflow_call:
+    inputs:
+      container:
+        description: "Container name (e.g., foo, bar)"
+        required: true
+        default: "fileflows"
+        type: string
+      push_on_main:
+        description: "Whether to push on main branch"
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  build-andpush:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.GHCR_USERNAME }}
+          password: ${{ secrets.GHCR_TOKEN }}
+
+      - name: Write .env file
+        if: ${{ secrets.DOTENV_FILE != '' }}
+        run: echo "${{ secrets.DOTENV_FILE }}" > .env
+
+      - name: Generate image tag
+        id: vars
+        run: echo "tag=$(date +'%Y%m%d%H%M')" >> $GITHUB_OUTPUT
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./${{ inputs.container }}
+          file: ./${{ inputs.container }}/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/${{ secrets.GHCR_USERNAME }}/whiffys-custom-${{ inputs.container }}:latest
+            ghcr.io/${{ secrets.GHCR_USERNAME }}/whiffys-custom-${{ inputs.container }}:${{ steps.vars.outputs.tag }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
