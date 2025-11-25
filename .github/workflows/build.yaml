@@ -31,10 +31,6 @@ jobs:
           username: ${{ secrets.GHCR_USERNAME }}
           password: ${{ secrets.GHCR_TOKEN }}
 
-      - name: Write .env file
-        if: ${{ secrets.DOTENV_FILE != '' }}
-        run: echo "${{ secrets.DOTENV_FILE }}" > .env
-
       - name: Generate image tag
         id: vars
         run: echo "tag=$(date +'%Y%m%d%H%M')" >> $GITHUB_OUTPUT
