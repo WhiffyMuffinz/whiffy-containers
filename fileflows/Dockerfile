@@ -18,7 +18,7 @@ ARG FFMPEG_BTBN_VERSION=latest
 # Install build dependencies
 RUN apt-get update && \
     apt-get install -y sudo tzdata wget ca-certificates gnupg curl tar xz-utils zstd libssl-dev apt-transport-https openssl locales libfontconfig1 libfreetype6 pciutils vainfo git cmake libffms2-dev \
-    build-essential autoconf automake libtool pkg-config nasm meson ninja-build python3-dev python3-venv python3-setuptools libavformat-dev libavfilter-dev libavdevice-dev libavcodec-dev libswscale-dev libxxhash-dev && \
+    build-essential autoconf automake libtool pkg-config nasm meson ninja-build python3-dev python3-venv python3-setuptools libavformat-dev libavfilter-dev libavdevice-dev libavcodec-dev libswscale-dev libxxhash-dev clang && \
     rm -rf /var/lib/apt/lists/*
 
 ENV PKG_CONFIG_PATH="/usr/local/lib/pkgconfig"
@@ -44,6 +44,14 @@ RUN curl -L "https://github.com/quietvoid/dovi_tool/releases/download/${DOVI_TOO
 # Install Rust
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 ENV PATH="/root/.cargo/bin:${PATH}"
+
+# install wild linker
+RUN cargo install wild-linker && \
+    cat >> /root/.cargo/config.toml << 'EOF'
+[target.x86_64-unknown-linux-gnu]
+linker = "clang"
+rustflags = ["-Clink-arg=--ld-path=wild"]
+EOF
 
 # Build zimg
 RUN git clone https://github.com/sekrit-twc/zimg.git /tmp/zimg && \
