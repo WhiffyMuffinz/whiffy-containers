@@ -14,10 +14,11 @@ ARG VAPOURSYNTH_VERSION=R71
 ARG BESTSOURCE_VERSION=R8
 ARG VSHIP_VERSION=v4.0.0
 ARG FFMPEG_BTBN_VERSION=latest
+ARG SVT_VERSION=v4.0.1
 
 # Install build dependencies
 RUN apt-get update && \
-    apt-get install -y sudo tzdata wget ca-certificates gnupg curl tar xz-utils zstd libssl-dev apt-transport-https openssl locales libfontconfig1 libfreetype6 pciutils vainfo git cmake libffms2-dev \
+    apt-get install -y sudo tzdata wget ca-certificates gnupg curl tar xz-utils zstd libssl-dev apt-transport-https openssl locales libfontconfig1 libfreetype6 pciutils vainfo git cmake libffms2-dev llvm \
     build-essential autoconf automake libtool pkg-config nasm meson ninja-build python3-dev python3-venv python3-setuptools libavformat-dev libavfilter-dev libavdevice-dev libavcodec-dev libswscale-dev libxxhash-dev clang && \
     rm -rf /var/lib/apt/lists/*
 
@@ -125,6 +126,14 @@ RUN git clone https://github.com/master-of-zen/Av1an.git /tmp/Av1an && \
     chmod +x /usr/local/bin/av1an && \
     rm -rf /tmp/Av1an
 
+# Install svt-av1
+RUN git clone https://gitlab.com/AOMediaCodec/SVT-AV1/ /tmp/svt-av1 && \
+    cd /tmp/svt-av1 && \
+    git checkout ${SVT_VERSION} && \
+    cd Build/linux && \
+    ./build.sh release --enable-lto --enable-pgo -xi --disable-native --disable-avx512
+
+
 # --- Final Stage ---
 FROM nvidia/cuda:13.0.2-runtime-ubuntu24.04
 
@@ -159,6 +168,7 @@ COPY --from=builder /usr/local/bin/ab-av1 /usr/local/bin/ab-av1
 COPY --from=builder /usr/local/bin/dovi_tool /usr/local/bin/dovi_tool
 COPY --from=builder /usr/local/bin/av1an /usr/local/bin/av1an
 COPY --from=builder /usr/local/bin/vspipe /usr/local/bin/vspipe
+COPY --from=builder /usr/local/bin/SvtAv1EncApp /usr/local/bin/SvtAv1EncApp
 # Copy compiled libraries (VapourSynth, Zimg, plugins)
 COPY --from=builder /usr/local/lib /usr/local/lib
 # Copy Python packages (VapourSynth bindings)
