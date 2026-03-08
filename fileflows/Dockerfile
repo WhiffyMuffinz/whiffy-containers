@@ -20,7 +20,7 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 ENV PATH="/root/.cargo/bin:${PATH}"
 
 # Install wild linker for Rust
-RUN cargo install wild-linker && \
+RUN cargo install --locked wild-linker && \
     mkdir -p /root/.cargo && \
     printf '[target.x86_64-unknown-linux-gnu]\nlinker = "clang"\nrustflags = ["-Clink-arg=--ld-path=wild"]\n' > /root/.cargo/config.toml
 
