@@ -1,5 +1,4 @@
 
-LABEL org.opencontainers.image.source https://github.com/whiffymuffinz/whiffy-containers
 
 FROM revenz/fileflows:26.03 AS appdata
 
@@ -164,6 +163,9 @@ RUN git clone https://github.com/master-of-zen/Av1an.git /tmp/Av1an && \
 # FINAL RUNTIME STAGE
 # ============================================================================
 FROM nvidia/cuda:13.0.2-runtime-ubuntu24.04 AS final
+
+
+LABEL org.opencontainers.image.source https://github.com/whiffymuffinz/whiffy-containers
 
 ARG DEBIAN_FRONTEND=noninteractive
 

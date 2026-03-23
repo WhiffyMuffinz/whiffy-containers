@@ -1,6 +1,6 @@
-LABEL org.opencontainers.image.source https://github.com/whiffymuffinz/whiffy-containers
 
 FROM python:3.12-slim
+LABEL org.opencontainers.image.source https://github.com/whiffymuffinz/whiffy-containers
 
 RUN apt-get update && \
     apt-get install -y \
@@ -17,4 +17,4 @@ RUN pip install --no-cache-dir 'mineru[api]>=2.7.1'
 
 ENV MINERU_MODEL_SOURCE=local
 
-CMD ["mineru-api --host 0.0.0.0"]
+CMD ["mineru-api", "--host", "0.0.0.0"]
