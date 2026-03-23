@@ -1,4 +1,7 @@
-FROM revenz/fileflows:25.11 AS appdata
+
+LABEL org.opencontainers.image.source https://github.com/whiffymuffinz/whiffy-containers
+
+FROM revenz/fileflows:26.03 AS appdata
 
 # ============================================================================
 # SHARED BASE STAGE - Common build dependencies
