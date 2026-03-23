@@ -1,4 +1,4 @@
-name: Build Fileflows Container
+name: Build Mineru Container
 
 on:
   push:
