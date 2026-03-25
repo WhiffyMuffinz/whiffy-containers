@@ -43,7 +43,7 @@ RUN mkdir -p /opt/ffmpeg-static && \
 
 # --- Stage: ab-av1 ---
 FROM base AS ab-av1
-ARG AB_AV1_VERSION=v0.10.1
+ARG AB_AV1_VERSION=v0.11.1
 RUN curl -L -o /tmp/ab-av1.tar.zst "https://github.com/alexheretic/ab-av1/releases/download/${AB_AV1_VERSION}/ab-av1-${AB_AV1_VERSION}-x86_64-unknown-linux-musl.tar.zst" && \
     tar --use-compress-program=unzstd -xvf /tmp/ab-av1.tar.zst -C /usr/local/bin ab-av1 && \
     rm /tmp/ab-av1.tar.zst
@@ -70,7 +70,7 @@ RUN git clone https://github.com/sekrit-twc/zimg.git /tmp/zimg && \
 
 # --- Stage: svt-av1 ---
 FROM base AS svt-av1
-ARG SVT_VERSION=v4.0.1
+ARG SVT_VERSION=v4.1.0
 RUN git clone https://gitlab.com/AOMediaCodec/SVT-AV1/ /tmp/svt-av1 && \
     cd /tmp/svt-av1 && \
     git checkout ${SVT_VERSION} && \
@@ -118,7 +118,7 @@ RUN git clone https://github.com/vapoursynth/bestsource.git /tmp/bestsource --re
 
 # --- Stage: SSIM2 CPU (depends on vapoursynth + Zig) ---
 FROM vapoursynth AS ssim2
-ARG ZIG_VERSION=0.15.2
+ARG ZIG_VERSION=0.16.0
 # Install Zig (only needed for SSIM2)
 RUN mkdir -p /opt/zig && \
     wget "https://ziglang.org/download/${ZIG_VERSION}/zig-x86_64-linux-${ZIG_VERSION}.tar.xz" && \
@@ -146,7 +146,7 @@ RUN git clone https://github.com/Line-fr/Vship.git /tmp/Vship && \
 
 # --- Stage: Av1an (depends on Rust + VapourSynth) ---
 FROM vapoursynth AS av1an
-ARG AV1AN_VERSION=0.5
+ARG AV1AN_VERSION=v0.5.2
 RUN apt-get update && apt-get install -y libffms2-dev && \
     rm -rf /var/lib/apt/lists/*
 RUN git clone https://github.com/master-of-zen/Av1an.git /tmp/Av1an && \
@@ -165,7 +165,7 @@ RUN git clone https://github.com/master-of-zen/Av1an.git /tmp/Av1an && \
 FROM nvidia/cuda:13.0.2-runtime-ubuntu24.04 AS final
 
 
-LABEL org.opencontainers.image.source https://github.com/whiffymuffinz/whiffy-containers
+LABEL org.opencontainers.image.source="https://github.com/whiffymuffinz/whiffy-containers"
 
 ARG DEBIAN_FRONTEND=noninteractive
 
