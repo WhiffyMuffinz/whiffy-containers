@@ -35,7 +35,22 @@ jobs:
         id: vars
         run: echo "tag=$(date +'%Y%m%d%H%M')" >> $GITHUB_OUTPUT
 
-      - name: Build and push Docker image
+      - name: Build Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./${{ inputs.container }}
+          file: ./${{ inputs.container }}/Dockerfile
+          load: true
+          tags: whiffy-test:${{ inputs.container }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Smoke tests
+        if: ${{ inputs.container == 'fileflows' }}
+        run: docker run --rm -i --entrypoint bash whiffy-test:fileflows < ./${{ inputs.container }}/test.sh
+
+      - name: Push Docker image
+        if: ${{ inputs.push_on_main }}
         uses: docker/build-push-action@v5
         with:
           context: ./${{ inputs.container }}
