@@ -1,6 +1,5 @@
 
 
-FROM revenz/fileflows:26.03 AS appdata
 
 # ============================================================================
 # SHARED BASE STAGE - Common build dependencies
@@ -118,7 +117,7 @@ RUN git clone https://github.com/vapoursynth/bestsource.git /tmp/bestsource --re
 
 # --- Stage: SSIM2 CPU (depends on vapoursynth + Zig) ---
 FROM vapoursynth AS ssim2
-ARG ZIG_VERSION=0.16.0
+ARG ZIG_VERSION=0.15.2
 # Install Zig (only needed for SSIM2)
 RUN mkdir -p /opt/zig && \
     wget "https://ziglang.org/download/${ZIG_VERSION}/zig-x86_64-linux-${ZIG_VERSION}.tar.xz" && \
@@ -127,7 +126,7 @@ RUN mkdir -p /opt/zig && \
 ENV PATH="/opt/zig/zig-x86_64-linux-${ZIG_VERSION}:${PATH}"
 RUN git clone https://github.com/dnjulek/vapoursynth-zip /tmp/vapoursynth-zip && \
     cd /tmp/vapoursynth-zip && \
-    git checkout R10 && \
+    git checkout R13 && \
     /opt/zig/zig-x86_64-linux-${ZIG_VERSION}/zig build -Doptimize=ReleaseFast && \
     mkdir -p /usr/local/lib/vapoursynth && \
     cp zig-out/lib/libvszip.so /usr/local/lib/vapoursynth && \
@@ -135,8 +134,8 @@ RUN git clone https://github.com/dnjulek/vapoursynth-zip /tmp/vapoursynth-zip &&
 
 # --- Stage: Vship GPU SSIM2 (depends on vapoursynth + CUDA) ---
 FROM vapoursynth AS vship
-ARG VSHIP_VERSION=v4.0.0
-RUN git clone https://github.com/Line-fr/Vship.git /tmp/Vship && \
+ARG VSHIP_VERSION=v5.0.0
+RUN git clone https://codeberg.org/Line-fr/Vship.git /tmp/Vship && \
     cd /tmp/Vship && \
     git checkout ${VSHIP_VERSION} && \
     make buildcudaall && \
@@ -221,7 +220,7 @@ ENV DOTNET_CLI_TELEMETRY_OPTOUT=true
 ENV PATH=/dotnet:/dotnet/tools:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/opt/ffmpeg-static/bin
 
 # Copy application code from the appdata stage
-COPY --from=appdata /app /app
+COPY --from=revenz/fileflows:26.03 /app /app
 
 # Make entrypoint script executable
 RUN chmod +x /app/docker-entrypoint.sh
