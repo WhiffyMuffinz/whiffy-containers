@@ -1,48 +1,77 @@
-name: Build and Push to GHCR
+name: Build Container
 
 on:
   workflow_call:
     inputs:
       container:
-        description: "Container name (e.g., foo, bar)"
+        description: "Container name (e.g. fileflows, mineru)"
         required: true
-        default: "fileflows"
         type: string
-      push_on_main:
-        description: "Whether to push on main branch"
+      push:
+        description: "Push image to GHCR after a successful test"
         required: false
         default: false
         type: boolean
+    outputs:
+      image_tag:
+        description: "Semver tag that was built (e.g. 26.03.12)"
+        value: ${{ jobs.build.outputs.image_tag }}
 
 jobs:
-  build-andpush:
+  build:
     runs-on: actions-runners-containers
+    outputs:
+      image_tag: ${{ steps.vars.outputs.tag }}
+
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
       - name: Log in to GHCR
+        if: ${{ inputs.push }}
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ secrets.GHCR_USERNAME }}
           password: ${{ secrets.GHCR_TOKEN }}
 
-      - name: Generate image tag
+      - name: Resolve semver tag
         id: vars
-        run: echo "tag=$(date +'%Y%m%d%H%M')" >> $GITHUB_OUTPUT
+        run: |
+          # Extracts upstream version from the final COPY --from=revenz/fileflows line.
+          # Adjust the grep pattern if your ARG/FROM structure differs.
+          UPSTREAM=$(grep -oP '(?<=revenz/fileflows:)[^\s]+' ${{ inputs.container }}/Dockerfile | tail -1)
+          echo "tag=${UPSTREAM}.${{ github.run_number }}" >> $GITHUB_OUTPUT
+          echo "Resolved tag: ${UPSTREAM}.${{ github.run_number }}"
 
-      - name: Build and push Docker image
+      - name: Build image (load locally)
         uses: docker/build-push-action@v5
         with:
           context: ./${{ inputs.container }}
           file: ./${{ inputs.container }}/Dockerfile
-          push: true
-          tags: |
-            ghcr.io/${{ secrets.GHCR_USERNAME }}/whiffys-custom-${{ inputs.container }}:latest
-            ghcr.io/${{ secrets.GHCR_USERNAME }}/whiffys-custom-${{ inputs.container }}:${{ steps.vars.outputs.tag }}
+          load: true
+          tags: whiffy-test:${{ inputs.container }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Smoke tests
+        run: |
+          docker run --rm -i \
+            --entrypoint bash \
+            whiffy-test:${{ inputs.container }} \
+            < ./${{ inputs.container }}/test.sh
+
+      - name: Tag and push to GHCR
+        if: ${{ inputs.push }}
+        env:
+          IMAGE: ghcr.io/${{ secrets.GHCR_USERNAME }}/whiffys-custom-${{ inputs.container }}
+          TAG: ${{ steps.vars.outputs.tag }}
+        run: |
+          docker tag whiffy-test:${{ inputs.container }} ${IMAGE}:${TAG}
+          docker tag whiffy-test:${{ inputs.container }} ${IMAGE}:latest
+          docker push ${IMAGE}:${TAG}
+          docker push ${IMAGE}:latest
+          echo "Pushed ${IMAGE}:${TAG} and ${IMAGE}:latest"
