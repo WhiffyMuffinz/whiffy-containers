@@ -1,16 +1,18 @@
-name: Build & Push — Fileflows
+name: CI — Fileflows
 
 on:
-  push:
-    branches: [main]
+  pull_request:
     paths:
       - "fileflows/**"
-  workflow_dispatch:
+  push:
+    branches-ignore: [main]
+    paths:
+      - "fileflows/**"
 
 jobs:
   build:
     uses: ./.github/workflows/build.yaml
     with:
       container: "fileflows"
-      push: true
+      push: false
     secrets: inherit
