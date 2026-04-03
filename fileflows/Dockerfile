@@ -42,7 +42,7 @@ RUN mkdir -p /opt/ffmpeg-static && \
 
 # --- Stage: ab-av1 ---
 FROM base AS ab-av1
-ARG AB_AV1_VERSION=v0.11.1
+ARG AB_AV1_VERSION=v0.11.2
 RUN curl -L -o /tmp/ab-av1.tar.zst "https://github.com/alexheretic/ab-av1/releases/download/${AB_AV1_VERSION}/ab-av1-${AB_AV1_VERSION}-x86_64-unknown-linux-musl.tar.zst" && \
     tar --use-compress-program=unzstd -xvf /tmp/ab-av1.tar.zst -C /usr/local/bin ab-av1 && \
     rm /tmp/ab-av1.tar.zst
@@ -85,7 +85,7 @@ RUN git clone https://gitlab.com/AOMediaCodec/SVT-AV1/ /tmp/svt-av1 && \
 
 # --- Stage: VapourSynth (depends on zimg) ---
 FROM zimg AS vapoursynth
-ARG VAPOURSYNTH_VERSION=R71
+ARG VAPOURSYNTH_VERSION=R73
 # Install Python packages needed for VapourSynth
 RUN apt-get update && apt-get install -y python3-dev python3-setuptools python3-pip && \
     pip install -U cython --break-system-packages && \
@@ -118,6 +118,8 @@ RUN git clone https://github.com/vapoursynth/bestsource.git /tmp/bestsource --re
 # --- Stage: SSIM2 CPU (depends on vapoursynth + Zig) ---
 FROM vapoursynth AS ssim2
 ARG ZIG_VERSION=0.15.2
+ARG VSZIP_VERSION=R13
+
 # Install Zig (only needed for SSIM2)
 RUN mkdir -p /opt/zig && \
     wget "https://ziglang.org/download/${ZIG_VERSION}/zig-x86_64-linux-${ZIG_VERSION}.tar.xz" && \
@@ -126,7 +128,7 @@ RUN mkdir -p /opt/zig && \
 ENV PATH="/opt/zig/zig-x86_64-linux-${ZIG_VERSION}:${PATH}"
 RUN git clone https://github.com/dnjulek/vapoursynth-zip /tmp/vapoursynth-zip && \
     cd /tmp/vapoursynth-zip && \
-    git checkout R13 && \
+    git checkout ${VSZIP_VERSION} && \
     /opt/zig/zig-x86_64-linux-${ZIG_VERSION}/zig build -Doptimize=ReleaseFast && \
     mkdir -p /usr/local/lib/vapoursynth && \
     cp zig-out/lib/libvszip.so /usr/local/lib/vapoursynth && \
