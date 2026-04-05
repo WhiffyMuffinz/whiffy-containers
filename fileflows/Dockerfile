@@ -196,6 +196,9 @@ COPY --from=ab-av1 /usr/local/bin/ab-av1 /usr/local/bin/ab-av1
 # ab-av1 path is for the script to detect like it's from the dockermod
 RUN mkdir -p /app/common/ab-av1
 RUN ln -s /usr/local/bin/ab-av1  /app/common/ab-av1/ab-av1
+RUN ln -s /usr/lib/jellyfin-ffmpeg/ffmpeg /app/common/ab-av1/ffmpeg \
+ && ln -s /usr/lib/jellyfin-ffmpeg/ffprobe /app/common/ab-av1/ffprobe
+
 COPY --from=dovi-tool /usr/local/bin/dovi_tool /usr/local/bin/dovi_tool
 COPY --from=svt-av1 /usr/local/bin/SvtAv1EncApp /usr/local/bin/SvtAv1EncApp
 COPY --from=av1an /usr/local/bin/av1an /usr/local/bin/av1an
