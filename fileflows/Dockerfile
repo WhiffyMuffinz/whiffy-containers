@@ -191,9 +191,9 @@ RUN curl -fsSL https://repo.jellyfin.org/debian/jellyfin_team.gpg.key | gpg --de
     ln -s /usr/lib/jellyfin-ffmpeg/ffprobe /usr/local/bin/ffprobe && \
     rm -rf /var/lib/apt/lists/*
 
-# Copy artifacts from independent stages (order doesn't matter for caching)
 COPY --from=ffmpeg-static /opt/ffmpeg-static /opt/ffmpeg-static
-COPY --from=ab-av1 /usr/local/bin/ab-av1 /usr/local/bin/ab-av1
+# ab-av1 path is for the script to detect like it's from the dockermod
+COPY --from=ab-av1 /usr/local/bin/ab-av1 /app/common/ab-av1/ab-av1
 COPY --from=dovi-tool /usr/local/bin/dovi_tool /usr/local/bin/dovi_tool
 COPY --from=svt-av1 /usr/local/bin/SvtAv1EncApp /usr/local/bin/SvtAv1EncApp
 COPY --from=av1an /usr/local/bin/av1an /usr/local/bin/av1an
