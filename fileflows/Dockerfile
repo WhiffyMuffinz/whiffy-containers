@@ -194,10 +194,12 @@ RUN curl -fsSL https://repo.jellyfin.org/debian/jellyfin_team.gpg.key | gpg --de
 COPY --from=ffmpeg-static /opt/ffmpeg-static /opt/ffmpeg-static
 COPY --from=ab-av1 /usr/local/bin/ab-av1 /usr/local/bin/ab-av1 
 # ab-av1 path is for the script to detect like it's from the dockermod
-RUN mkdir -p /app/common/ab-av1
-RUN ln -s /usr/local/bin/ab-av1  /app/common/ab-av1/ab-av1
-RUN ln -s /usr/lib/jellyfin-ffmpeg/ffmpeg /app/common/ab-av1/ffmpeg \
- && ln -s /usr/lib/jellyfin-ffmpeg/ffprobe /app/common/ab-av1/ffprobe
+RUN mkdir -p /app/common/ab-av1 && \
+    ln -s /usr/local/bin/ab-av1 /app/common/ab-av1/ab-av1 && \
+    ln -s /usr/lib/jellyfin-ffmpeg/ffprobe /app/common/ab-av1/ffprobe && \
+    printf '#!/bin/bash\nif [[ "$@" =~ libvmaf|libsvtav1|xpsnr|libaom-av1 ]]; then\n    /opt/ffmpeg-static/bin/ffmpeg "$@"\nelse\n    /usr/lib/jellyfin-ffmpeg/ffmpeg "$@"\nfi\nexit $?\n' \
+    > /app/common/ab-av1/ffmpeg && \
+    chmod +x /app/common/ab-av1/ffmpeg
 
 COPY --from=dovi-tool /usr/local/bin/dovi_tool /usr/local/bin/dovi_tool
 COPY --from=svt-av1 /usr/local/bin/SvtAv1EncApp /usr/local/bin/SvtAv1EncApp
