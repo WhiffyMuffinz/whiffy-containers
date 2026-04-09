@@ -4,4 +4,14 @@
   dockerfile: {
     enabled: true,
   },
+  {
+  "regexManagers": [
+    {
+      "fileMatch": ["(^|/)Dockerfile$"],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>.*?) depName=(?<depName>.*?) versioning=(?<versioning>.*?)\\s+ARG (?<varName>.*?)=(?<currentValue>.*)"
+      ]
+    }
+  ]
+}
 }
