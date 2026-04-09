@@ -1,17 +1,21 @@
 {
-  $schema: "https://docs.renovatebot.com/renovate-schema.json",
-  extends: ["config:recommended"],
-  dockerfile: {
-    enabled: true,
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+
+  "dockerfile": {
+    "enabled": true
   },
-  {
-  "regexManagers": [
+
+  "customManagers": [
     {
-      "fileMatch": ["(^|/)Dockerfile$"],
+      "customType": "regex",
+      "managerFilePatterns": ["(^|/)Dockerfile$"],
       "matchStrings": [
-        "# renovate: datasource=(?<datasource>.*?) depName=(?<depName>.*?) versioning=(?<versioning>.*?)\\s+ARG (?<varName>.*?)=(?<currentValue>.*)"
-      ]
+        "# renovate: datasource=(?<datasource>[^\\s]+) depName=(?<depName>[^\\s]+)(?: versioning=(?<versioning>[^\\s]+))?\\s+ARG [A-Z0-9_]+=(?<currentValue>[^\\s]+)"
+      ],
+      "datasourceTemplate": "{{datasource}}",
+      "depNameTemplate": "{{depName}}",
+      "versioningTemplate": "{{#if versioning}}{{versioning}}{{else}}semver-coerced{{/if}}"
     }
   ]
-}
 }
