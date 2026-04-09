@@ -42,7 +42,7 @@ RUN mkdir -p /opt/ffmpeg-static && \
 
 # --- Stage: ab-av1 ---
 FROM base AS ab-av1
-# renovate: datasource=github-releases depName=alexheretic/ab-av1 versioning=semver
+# renovate: datasource=github-releases depName=alexheretic/ab-av1 versioning=semver-coerced
 ARG AB_AV1_VERSION=v0.11.1
 RUN curl -L -o /tmp/ab-av1.tar.zst "https://github.com/alexheretic/ab-av1/releases/download/${AB_AV1_VERSION}/ab-av1-${AB_AV1_VERSION}-x86_64-unknown-linux-musl.tar.zst" && \
     tar --use-compress-program=unzstd -xvf /tmp/ab-av1.tar.zst -C /usr/local/bin ab-av1 && \
