@@ -48,7 +48,7 @@ jobs:
           echo "Resolved tag: ${UPSTREAM}.${{ github.run_number }}"
 
       - name: Build image (load locally)
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           context: ./${{ inputs.container }}
           file: ./${{ inputs.container }}/Dockerfile
