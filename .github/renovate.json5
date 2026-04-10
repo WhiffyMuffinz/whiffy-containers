@@ -10,6 +10,7 @@
     {
       "customType": "regex",
       "managerFilePatterns": ["(^|/)Dockerfile$"],
+      "fileMatch": ["Dockerfile", "Containerfile"],
       "matchStrings": [
         "# renovate: datasource=(?<datasource>[^\\s]+) depName=(?<depName>[^\\s]+)(?: versioning=(?<versioning>[^\\s]+))?\\s+ARG [A-Z0-9_]+=(?<currentValue>[^\\s]+)"
       ],
