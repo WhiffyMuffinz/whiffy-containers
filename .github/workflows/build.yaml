@@ -60,7 +60,7 @@ jobs:
           load: true
           tags: whiffy-test:${{ inputs.container }}
           cache-from: type=registry,ref=zot-app-template.zot.svc.cluster.local:5000
-          cache-to: type=registry,ref=zot.app-template.zot.svc.sluter.local:5000,mode=max
+          cache-to: type=registry,ref=zot-app-template.zot.svc.sluter.local:5000,mode=max
 
       - name: Smoke tests
         run: |
