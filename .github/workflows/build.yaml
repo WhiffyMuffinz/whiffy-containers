@@ -29,6 +29,11 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
+        with:
+          buildkitd-config-inline: |
+            [registry."zot-app-template.zot.svc.cluster.local:5000"]
+            http = true
+            insecure = true
 
       - name: Log in to GHCR
         if: ${{ inputs.push }}
@@ -54,8 +59,8 @@ jobs:
           file: ./${{ inputs.container }}/Dockerfile
           load: true
           tags: whiffy-test:${{ inputs.container }}
-          cache-from: type=zot-app-template.zot.svc.cluster.local:5000
-          cache-to: type=zot.app-template.zot.svc.sluter.local:5000,mode=max
+          cache-from: type=registry,ref=zot-app-template.zot.svc.cluster.local:5000
+          cache-to: type=registry,ref=zot.app-template.zot.svc.sluter.local:5000,mode=max
 
       - name: Smoke tests
         run: |
