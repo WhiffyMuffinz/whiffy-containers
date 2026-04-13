@@ -29,11 +29,6 @@ jobs:
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
-        with:
-          buildkitd-config-inline: |
-            [registry."zot-app-template.zot.svc.cluster.local:5000"]
-            http = true
-            insecure = true
 
       - name: Log in to GHCR
         if: ${{ inputs.push }}
