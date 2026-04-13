@@ -59,8 +59,8 @@ jobs:
           file: ./${{ inputs.container }}/Dockerfile
           load: true
           tags: whiffy-test:${{ inputs.container }}
-          cache-from: type=zot-app-template.zot.svc.cluster.local
-          cache-to: type=zot.app-template.zot.svc.sluter.local,mode=max
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: Smoke tests
         run: |
