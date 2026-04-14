@@ -20,5 +20,11 @@
       "registryUrlTemplate": "{{registryUrl}}",
       "versioningTemplate": "{{#if versioning}}{{versioning}}{{else}}semver-coerced{{/if}}"
     }
+  ],
+  "packageRules": [
+    {
+      "matchDepNames": ["master-of-zen/Av1an"],
+      "allowedVersions": "/^v/"
+    }
   ]
 }
