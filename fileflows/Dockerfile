@@ -140,7 +140,7 @@ RUN git clone https://github.com/dnjulek/vapoursynth-zip /tmp/vapoursynth-zip &&
 
 # --- Stage: Vship GPU SSIM2 (depends on vapoursynth + CUDA) ---
 FROM vapoursynth AS vship
-# renovate: datasource=gitea-releases depName=Line-fr/Vship versioning=semver-coerced
+# renovate: datasource=forgejo-releases depName=Line-fr/Vship registryUrl=https://codeberg.org versioning=semver-coerced
 ARG VSHIP_VERSION=v5.0.0
 RUN git clone https://codeberg.org/Line-fr/Vship.git /tmp/Vship && \
     cd /tmp/Vship && \
