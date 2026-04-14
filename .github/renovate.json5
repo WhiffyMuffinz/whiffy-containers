@@ -4,6 +4,7 @@
   "dockerfile": {
     "enabled": true
   },
+  "pinDigests": true,
   "customManagers": [
     {
       "customType": "regex",
@@ -13,12 +14,10 @@
         "/Containerfile/"
       ],
       "matchStrings": [
-        "# renovate: datasource=(?<datasource>[^\\s]+) depName=(?<depName>[^\\s]+)(?: registryUrl=(?<registryUrl>[^\\s]+))?(?: versioning=(?<versioning>[^\\s]+))?\\s+ARG [A-Z0-9_]+=(?<currentValue>[^\\s]+)"
+        "# renovate: datasource=(?<datasource>[^\\s]+) depName=(?<depName>[^\\s]+)(?: registryUrl=(?<registryUrl>[^\\s]+))?(?: versioning=(?<versioning>[^\\s]+))?(?: extractVersion=(?<extractVersion>[^\\s]+))?\\s+ARG [A-Z0-9_]+=(?<currentValue>[^\\s]+)"
       ],
       "datasourceTemplate": "{{datasource}}",
-      "depNameTemplate": "{{depName}}",
-      "registryUrlTemplate": "{{registryUrl}}",
-      "versioningTemplate": "{{#if versioning}}{{versioning}}{{else}}semver-coerced{{/if}}"
+      "depNameTemplate": "{{depName}}"
     }
   ],
   "packageRules": [
