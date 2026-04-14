@@ -153,7 +153,7 @@ RUN git clone https://codeberg.org/Line-fr/Vship.git /tmp/Vship && \
 # --- Stage: Av1an (depends on Rust + VapourSynth) ---
 FROM vapoursynth AS av1an
 # renovate: datasource=github-tags depName=master-of-zen/Av1an versioning=semver-coerced
-ARG AV1AN_VERSION=v0.5.2
+ARG AV1AN_VERSION=1.12
 RUN apt-get update && apt-get install -y libffms2-dev && \
     rm -rf /var/lib/apt/lists/*
 RUN git clone https://github.com/master-of-zen/Av1an.git /tmp/Av1an && \
