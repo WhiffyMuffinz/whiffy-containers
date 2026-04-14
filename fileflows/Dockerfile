@@ -89,7 +89,7 @@ RUN git clone https://gitlab.com/AOMediaCodec/SVT-AV1/ /tmp/svt-av1 && \
 
 # --- Stage: VapourSynth (depends on zimg) ---
 FROM zimg AS vapoursynth
-# renovate: datasource=github-tags depName=vapoursynth/vapoursynth versioning=semver
+# renovate: datasource=github-tags depName=vapoursynth/vapoursynth versioning=regex:^R(?<major>\d+)$
 ARG VAPOURSYNTH_VERSION=R71
 # Install Python packages needed for VapourSynth
 RUN apt-get update && apt-get install -y python3-dev python3-setuptools python3-pip && \
@@ -111,7 +111,7 @@ RUN git clone https://github.com/vapoursynth/vapoursynth.git /tmp/vapoursynth &&
 
 # --- Stage: BestSource (depends on vapoursynth) ---
 FROM vapoursynth AS bestsource
-# renovate: datasource=github-tags depName=vapoursynth/bestsource versioning=semver
+# renovate: datasource=github-tags depName=vapoursynth/bestsource versioning=regex:^R(?<major>\d+)$
 ARG BESTSOURCE_VERSION=R8
 RUN git clone https://github.com/vapoursynth/bestsource.git /tmp/bestsource --recurse-submodules --shallow-submodules --remote-submodules && \
     cd /tmp/bestsource && \
@@ -170,9 +170,6 @@ RUN git clone https://github.com/master-of-zen/Av1an.git /tmp/Av1an && \
 # FINAL RUNTIME STAGE
 # ============================================================================
 FROM nvidia/cuda:13.0.2-runtime-ubuntu24.04 AS final
-
-
-LABEL org.opencontainers.image.source="https://github.com/whiffymuffinz/whiffy-containers"
 
 ARG DEBIAN_FRONTEND=noninteractive
 
