@@ -50,12 +50,14 @@ RUN curl -L -o /tmp/ab-av1.tar.zst "https://github.com/alexheretic/ab-av1/releas
 
 # --- Stage: dovi_tool ---
 FROM base AS dovi-tool
+# renovate: datasource=github-releases depName=quietvoid/dovi_tool versioning=semver-coerced
 ARG DOVI_TOOL_VERSION=2.3.1
 RUN curl -L "https://github.com/quietvoid/dovi_tool/releases/download/${DOVI_TOOL_VERSION}/dovi_tool-${DOVI_TOOL_VERSION}-x86_64-unknown-linux-musl.tar.gz" | \
     tar -xzvf - -C /usr/local/bin
 
 # --- Stage: zimg ---
 FROM base AS zimg
+# renovate: datasource=github-releases depName=sekrit-twc/zimg versioning=semver-coerced
 ARG ZIMG_VERSION=release-3.0.6
 RUN git clone https://github.com/sekrit-twc/zimg.git /tmp/zimg && \
     cd /tmp/zimg && \
@@ -70,6 +72,7 @@ RUN git clone https://github.com/sekrit-twc/zimg.git /tmp/zimg && \
 
 # --- Stage: svt-av1 ---
 FROM base AS svt-av1
+# renovate: datasource=gitlab-releases depName=AOMediaCodec/SVT-AV1 versioning=semver-coerced
 ARG SVT_VERSION=v4.1.0
 RUN git clone https://gitlab.com/AOMediaCodec/SVT-AV1/ /tmp/svt-av1 && \
     cd /tmp/svt-av1 && \
@@ -86,6 +89,7 @@ RUN git clone https://gitlab.com/AOMediaCodec/SVT-AV1/ /tmp/svt-av1 && \
 
 # --- Stage: VapourSynth (depends on zimg) ---
 FROM zimg AS vapoursynth
+# renovate: datasource=github-tags depName=vapoursynth/vapoursynth versioning=semver
 ARG VAPOURSYNTH_VERSION=R71
 # Install Python packages needed for VapourSynth
 RUN apt-get update && apt-get install -y python3-dev python3-setuptools python3-pip && \
@@ -107,6 +111,7 @@ RUN git clone https://github.com/vapoursynth/vapoursynth.git /tmp/vapoursynth &&
 
 # --- Stage: BestSource (depends on vapoursynth) ---
 FROM vapoursynth AS bestsource
+# renovate: datasource=github-tags depName=vapoursynth/bestsource versioning=semver
 ARG BESTSOURCE_VERSION=R8
 RUN git clone https://github.com/vapoursynth/bestsource.git /tmp/bestsource --recurse-submodules --shallow-submodules --remote-submodules && \
     cd /tmp/bestsource && \
@@ -135,6 +140,7 @@ RUN git clone https://github.com/dnjulek/vapoursynth-zip /tmp/vapoursynth-zip &&
 
 # --- Stage: Vship GPU SSIM2 (depends on vapoursynth + CUDA) ---
 FROM vapoursynth AS vship
+# renovate: datasource=gitea-releases depName=Line-fr/Vship versioning=semver-coerced
 ARG VSHIP_VERSION=v5.0.0
 RUN git clone https://codeberg.org/Line-fr/Vship.git /tmp/Vship && \
     cd /tmp/Vship && \
@@ -146,6 +152,7 @@ RUN git clone https://codeberg.org/Line-fr/Vship.git /tmp/Vship && \
 
 # --- Stage: Av1an (depends on Rust + VapourSynth) ---
 FROM vapoursynth AS av1an
+# renovate: datasource=github-tags depName=master-of-zen/Av1an versioning=semver-coerced
 ARG AV1AN_VERSION=v0.5.2
 RUN apt-get update && apt-get install -y libffms2-dev && \
     rm -rf /var/lib/apt/lists/*
