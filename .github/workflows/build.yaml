@@ -83,7 +83,7 @@ jobs:
         run: |
           git config --global user.name "github-actions"
           git config --global user.email "github-actions@github.com"
-          git add ${{ inputs.container }}/VERSION
+          git add ${{ inputs.container }}/VERSION ${{ inputs.container }}/VERSION.deps
           if ! git diff --cached --quiet; then
             git commit -m "Bump ${{ inputs.container }} version to ${{ steps.vars.outputs.tag }}" || true
             git push
