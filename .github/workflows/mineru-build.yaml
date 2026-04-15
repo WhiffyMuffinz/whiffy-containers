@@ -5,12 +5,13 @@ on:
     branches: [main]
     paths:
       - "mineru/**"
+      - ".github/workflows/**"
   workflow_dispatch:
 
 jobs:
-  call-build-workflow:
+  build:
     uses: ./.github/workflows/build.yaml
     with:
       container: "mineru"
-      push_on_main: true
+      push: true
     secrets: inherit
