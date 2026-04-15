@@ -1,7 +1,7 @@
 name: CI — Fileflows
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ci-fileflows-${{ github.head_ref || github.ref_name }}
   cancel-in-progress: true
 
 on:

@@ -1,7 +1,7 @@
 name: CI — Mineru
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ci-mineru-${{ github.head_ref || github.ref_name }}
   cancel-in-progress: true
 
 on:
