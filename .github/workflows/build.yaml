@@ -41,11 +41,25 @@ jobs:
       - name: Resolve semver tag
         id: vars
         run: |
-          # Extracts upstream version from the final COPY --from=revenz/fileflows line.
-          # Adjust the grep pattern if your ARG/FROM structure differs.
+          # Extract upstream version from Dockerfile
           UPSTREAM=$(grep -oP '(?<=revenz/fileflows:)[^\s]+' ${{ inputs.container }}/Dockerfile | tail -1)
-          echo "tag=${UPSTREAM}.${{ github.run_number }}" >> $GITHUB_OUTPUT
-          echo "Resolved tag: ${UPSTREAM}.${{ github.run_number }}"
+          if [ -z "$UPSTREAM" ]; then
+            # Fallback: try to extract from FROM line for mineru
+            UPSTREAM=$(grep -oP "(?<=mineru\[api\]>='?)[0-9.]+" ${{ inputs.container }}/Dockerfile | head -1)
+          fi
+          
+          # Read current version from VERSION file
+          CURRENT=$(cat ${{ inputs.container }}/VERSION)
+          
+          # Run version-bump.sh to determine new version
+          NEW_VERSION=$(/bin/bash ${{ inputs.container }}/version-bump.sh "$CURRENT" "$UPSTREAM")
+          
+          echo "tag=${NEW_VERSION}" >> $GITHUB_OUTPUT
+          echo "Resolved tag: ${NEW_VERSION}"
+          echo "Upstream: ${UPSTREAM}, Current: ${CURRENT}, New: ${NEW_VERSION}"
+          
+          # Update VERSION file with new version
+          echo "$NEW_VERSION" > ${{ inputs.container }}/VERSION
 
       - name: Build image (load locally)
         uses: docker/build-push-action@v7
@@ -63,6 +77,17 @@ jobs:
             --entrypoint bash \
             whiffy-test:${{ inputs.container }} \
             < ./${{ inputs.container }}/test.sh
+
+      - name: Commit version update
+        if: ${{ inputs.push }}
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "github-actions@github.com"
+          git add ${{ inputs.container }}/VERSION
+          if ! git diff --cached --quiet; then
+            git commit -m "Bump ${{ inputs.container }} version to ${{ steps.vars.outputs.tag }}" || true
+            git push
+          fi
 
       - name: Tag and push to GHCR
         if: ${{ inputs.push }}
