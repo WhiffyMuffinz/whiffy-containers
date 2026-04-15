@@ -4,7 +4,7 @@
 # ============================================================================
 # SHARED BASE STAGE - Common build dependencies
 # ============================================================================
-FROM nvidia/cuda:13.0.2-devel-ubuntu24.04@sha256:5dc1bca23d05bd37b011be68ec470c03b403a5da07ec3a86e41af9470e9d0cc6 AS base
+FROM nvidia/cuda:13.2.0-devel-ubuntu24.04@sha256:f9492f2eea77fbc3d0c14fa8738f35946b42da72917bf5959d284ca39b4f209a AS base
 
 ARG DEBIAN_FRONTEND=noninteractive
 
@@ -169,7 +169,7 @@ RUN git clone https://github.com/master-of-zen/Av1an.git /tmp/Av1an && \
 # ============================================================================
 # FINAL RUNTIME STAGE
 # ============================================================================
-FROM nvidia/cuda:13.0.2-runtime-ubuntu24.04@sha256:6a0e31b59e70890446f2c17356d6efc0d54260090a8c63d6ca7c2ad049db95d2 AS final
+FROM nvidia/cuda:13.2.0-runtime-ubuntu24.04@sha256:7fada70c5ed1b85cb3c15b53f51300fdacff1c31466a20e4f2b29ad952fd63a2 AS final
 
 ARG DEBIAN_FRONTEND=noninteractive
 
