@@ -1,6 +1,6 @@
 
 FROM python:3.12-slim@sha256:804ddf3251a60bbf9c92e73b7566c40428d54d0e79d3428194edf40da6521286
-LABEL org.opencontainers.image.source https://github.com/whiffymuffinz/whiffy-containers
+LABEL org.opencontainers.image.source=https://github.com/whiffymuffinz/whiffy-containers
 
 RUN apt-get update && \
     apt-get install -y \
@@ -16,7 +16,7 @@ RUN apt-get update && \
 
 # renovate: datasource=pypi depName=mineru
 ARG MINERU_VERSION=2.7.1
-RUN pip install --no-cache-dir "mineru[api]>=${MINERU_VERSION}"
+RUN pip install --no-cache-dir "mineru[api]==${MINERU_VERSION}"
 
 
 ENV MINERU_MODEL_SOURCE=local
