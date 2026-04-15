@@ -30,7 +30,7 @@ cleanup() {
 trap cleanup EXIT
 
 echo "Waiting for API to start..."
-sleep 3
+sleep 5
 
 if ! kill -0 $API_PID 2>/dev/null; then
   fail "mineru-api failed to start"
