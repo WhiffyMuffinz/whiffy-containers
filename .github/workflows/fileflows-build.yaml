@@ -1,5 +1,9 @@
 name: Build & Push — Fileflows
 
+permissions:
+  contents: write
+  packages: write
+
 on:
   push:
     branches: [main]
@@ -7,6 +11,10 @@ on:
       - "fileflows/**"
       - ".github/workflows/**"
   workflow_dispatch:
+
+concurrency:
+  group: build-fileflows
+  cancel-in-progress: true
 
 jobs:
   build:

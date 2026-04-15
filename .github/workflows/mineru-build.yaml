@@ -1,5 +1,9 @@
 name: Build Mineru Container
 
+permissions:
+  contents: write
+  packages: write
+
 on:
   push:
     branches: [main]
@@ -7,6 +11,10 @@ on:
       - "mineru/**"
       - ".github/workflows/**"
   workflow_dispatch:
+
+concurrency:
+  group: build-mineru
+  cancel-in-progress: true
 
 jobs:
   build:
