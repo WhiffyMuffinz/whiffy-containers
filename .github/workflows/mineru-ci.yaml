@@ -8,6 +8,7 @@ on:
     branches-ignore: [main]
     paths:
       - "mineru/**"
+      - ".github/workflows/**"
 
 jobs:
   build:
