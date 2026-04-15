@@ -112,7 +112,7 @@ RUN git clone https://github.com/vapoursynth/vapoursynth.git /tmp/vapoursynth &&
 # --- Stage: BestSource (depends on vapoursynth) ---
 FROM vapoursynth AS bestsource
 # renovate: datasource=github-tags depName=vapoursynth/bestsource versioning=regex:^R(?<major>\d+)$
-ARG BESTSOURCE_VERSION=R8
+ARG BESTSOURCE_VERSION=R17
 RUN git clone https://github.com/vapoursynth/bestsource.git /tmp/bestsource --recurse-submodules --shallow-submodules --remote-submodules && \
     cd /tmp/bestsource && \
     git checkout ${BESTSOURCE_VERSION} && \
