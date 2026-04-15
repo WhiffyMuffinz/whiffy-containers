@@ -42,6 +42,7 @@ RUN mkdir -p /opt/ffmpeg-static && \
 
 # --- Stage: ab-av1 ---
 FROM base AS ab-av1
+# renovate: datasource=github-releases depName=alexheretic/ab-av1 versioning=semver-coerced
 ARG AB_AV1_VERSION=v0.11.2
 RUN curl -L -o /tmp/ab-av1.tar.zst "https://github.com/alexheretic/ab-av1/releases/download/${AB_AV1_VERSION}/ab-av1-${AB_AV1_VERSION}-x86_64-unknown-linux-musl.tar.zst" && \
     tar --use-compress-program=unzstd -xvf /tmp/ab-av1.tar.zst -C /usr/local/bin ab-av1 && \
@@ -49,12 +50,14 @@ RUN curl -L -o /tmp/ab-av1.tar.zst "https://github.com/alexheretic/ab-av1/releas
 
 # --- Stage: dovi_tool ---
 FROM base AS dovi-tool
+# renovate: datasource=github-releases depName=quietvoid/dovi_tool versioning=semver-coerced
 ARG DOVI_TOOL_VERSION=2.3.1
 RUN curl -L "https://github.com/quietvoid/dovi_tool/releases/download/${DOVI_TOOL_VERSION}/dovi_tool-${DOVI_TOOL_VERSION}-x86_64-unknown-linux-musl.tar.gz" | \
     tar -xzvf - -C /usr/local/bin
 
 # --- Stage: zimg ---
 FROM base AS zimg
+# renovate: datasource=github-releases depName=sekrit-twc/zimg versioning=semver-coerced
 ARG ZIMG_VERSION=release-3.0.6
 RUN git clone https://github.com/sekrit-twc/zimg.git /tmp/zimg && \
     cd /tmp/zimg && \
@@ -69,6 +72,7 @@ RUN git clone https://github.com/sekrit-twc/zimg.git /tmp/zimg && \
 
 # --- Stage: svt-av1 ---
 FROM base AS svt-av1
+# renovate: datasource=gitlab-releases depName=AOMediaCodec/SVT-AV1 versioning=semver-coerced
 ARG SVT_VERSION=v4.1.0
 RUN git clone https://gitlab.com/AOMediaCodec/SVT-AV1/ /tmp/svt-av1 && \
     cd /tmp/svt-av1 && \
@@ -85,7 +89,8 @@ RUN git clone https://gitlab.com/AOMediaCodec/SVT-AV1/ /tmp/svt-av1 && \
 
 # --- Stage: VapourSynth (depends on zimg) ---
 FROM zimg AS vapoursynth
-ARG VAPOURSYNTH_VERSION=R73
+# renovate: datasource=github-tags depName=vapoursynth/vapoursynth versioning=regex:^R(?<major>\d+)$
+ARG VAPOURSYNTH_VERSION=R71
 # Install Python packages needed for VapourSynth
 RUN apt-get update && apt-get install -y python3-dev python3-setuptools python3-pip && \
     pip install -U cython --break-system-packages && \
@@ -106,6 +111,7 @@ RUN git clone https://github.com/vapoursynth/vapoursynth.git /tmp/vapoursynth &&
 
 # --- Stage: BestSource (depends on vapoursynth) ---
 FROM vapoursynth AS bestsource
+# renovate: datasource=github-tags depName=vapoursynth/bestsource versioning=regex:^R(?<major>\d+)$
 ARG BESTSOURCE_VERSION=R8
 RUN git clone https://github.com/vapoursynth/bestsource.git /tmp/bestsource --recurse-submodules --shallow-submodules --remote-submodules && \
     cd /tmp/bestsource && \
@@ -136,6 +142,7 @@ RUN git clone https://github.com/dnjulek/vapoursynth-zip /tmp/vapoursynth-zip &&
 
 # --- Stage: Vship GPU SSIM2 (depends on vapoursynth + CUDA) ---
 FROM vapoursynth AS vship
+# renovate: datasource=forgejo-releases depName=Line-fr/Vship registryUrl=https://codeberg.org versioning=semver-coerced
 ARG VSHIP_VERSION=v5.0.0
 RUN git clone https://codeberg.org/Line-fr/Vship.git /tmp/Vship && \
     cd /tmp/Vship && \
@@ -147,6 +154,7 @@ RUN git clone https://codeberg.org/Line-fr/Vship.git /tmp/Vship && \
 
 # --- Stage: Av1an (depends on Rust + VapourSynth) ---
 FROM vapoursynth AS av1an
+# renovate: datasource=github-tags depName=master-of-zen/Av1an versioning=semver-coerced
 ARG AV1AN_VERSION=v0.5.2
 RUN apt-get update && apt-get install -y libffms2-dev && \
     rm -rf /var/lib/apt/lists/*
@@ -164,9 +172,6 @@ RUN git clone https://github.com/master-of-zen/Av1an.git /tmp/Av1an && \
 # FINAL RUNTIME STAGE
 # ============================================================================
 FROM nvidia/cuda:13.0.2-runtime-ubuntu24.04 AS final
-
-
-LABEL org.opencontainers.image.source="https://github.com/whiffymuffinz/whiffy-containers"
 
 ARG DEBIAN_FRONTEND=noninteractive
 
@@ -193,9 +198,16 @@ RUN curl -fsSL https://repo.jellyfin.org/debian/jellyfin_team.gpg.key | gpg --de
     ln -s /usr/lib/jellyfin-ffmpeg/ffprobe /usr/local/bin/ffprobe && \
     rm -rf /var/lib/apt/lists/*
 
-# Copy artifacts from independent stages (order doesn't matter for caching)
 COPY --from=ffmpeg-static /opt/ffmpeg-static /opt/ffmpeg-static
-COPY --from=ab-av1 /usr/local/bin/ab-av1 /usr/local/bin/ab-av1
+COPY --from=ab-av1 /usr/local/bin/ab-av1 /usr/local/bin/ab-av1 
+# ab-av1 path is for the script to detect like it's from the dockermod
+RUN mkdir -p /app/common/ab-av1 && \
+    ln -s /usr/local/bin/ab-av1 /app/common/ab-av1/ab-av1 && \
+    ln -s /usr/lib/jellyfin-ffmpeg/ffprobe /app/common/ab-av1/ffprobe && \
+    printf '#!/bin/bash\nif [[ "$@" =~ libvmaf|libsvtav1|xpsnr|libaom-av1 ]]; then\n    /opt/ffmpeg-static/bin/ffmpeg "$@"\nelse\n    /usr/lib/jellyfin-ffmpeg/ffmpeg "$@"\nfi\nexit $?\n' \
+    > /app/common/ab-av1/ffmpeg && \
+    chmod +x /app/common/ab-av1/ffmpeg
+
 COPY --from=dovi-tool /usr/local/bin/dovi_tool /usr/local/bin/dovi_tool
 COPY --from=svt-av1 /usr/local/bin/SvtAv1EncApp /usr/local/bin/SvtAv1EncApp
 COPY --from=av1an /usr/local/bin/av1an /usr/local/bin/av1an
@@ -222,7 +234,7 @@ ENV DOTNET_CLI_TELEMETRY_OPTOUT=true
 ENV PATH=/dotnet:/dotnet/tools:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/opt/ffmpeg-static/bin
 
 # Copy application code from the appdata stage
-COPY --from=revenz/fileflows:26.03 /app /app
+COPY --from=revenz/fileflows:26.04 /app /app
 
 # Make entrypoint script executable
 RUN chmod +x /app/docker-entrypoint.sh

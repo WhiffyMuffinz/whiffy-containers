@@ -25,14 +25,14 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Log in to GHCR
         if: ${{ inputs.push }}
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ secrets.GHCR_USERNAME }}
@@ -41,14 +41,28 @@ jobs:
       - name: Resolve semver tag
         id: vars
         run: |
-          # Extracts upstream version from the final COPY --from=revenz/fileflows line.
-          # Adjust the grep pattern if your ARG/FROM structure differs.
+          # Extract upstream version from Dockerfile
           UPSTREAM=$(grep -oP '(?<=revenz/fileflows:)[^\s]+' ${{ inputs.container }}/Dockerfile | tail -1)
-          echo "tag=${UPSTREAM}.${{ github.run_number }}" >> $GITHUB_OUTPUT
-          echo "Resolved tag: ${UPSTREAM}.${{ github.run_number }}"
+          if [ -z "$UPSTREAM" ]; then
+            # Fallback: try to extract from FROM line for mineru
+            UPSTREAM=$(grep -oP "(?<=mineru\[api\]>='?)[0-9.]+" ${{ inputs.container }}/Dockerfile | head -1)
+          fi
+          
+          # Read current version from VERSION file
+          CURRENT=$(cat ${{ inputs.container }}/VERSION)
+          
+          # Run version-bump.sh to determine new version
+          NEW_VERSION=$(/bin/bash ${{ inputs.container }}/version-bump.sh "$CURRENT" "$UPSTREAM")
+          
+          echo "tag=${NEW_VERSION}" >> $GITHUB_OUTPUT
+          echo "Resolved tag: ${NEW_VERSION}"
+          echo "Upstream: ${UPSTREAM}, Current: ${CURRENT}, New: ${NEW_VERSION}"
+          
+          # Update VERSION file with new version
+          echo "$NEW_VERSION" > ${{ inputs.container }}/VERSION
 
       - name: Build image (load locally)
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           context: ./${{ inputs.container }}
           file: ./${{ inputs.container }}/Dockerfile
@@ -63,6 +77,20 @@ jobs:
             --entrypoint bash \
             whiffy-test:${{ inputs.container }} \
             < ./${{ inputs.container }}/test.sh
+
+      - name: Commit version update
+        if: ${{ inputs.push }}
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "github-actions@github.com"
+          git add ${{ inputs.container }}/VERSION
+          if [ -f "${{ inputs.container }}/VERSION.deps" ]; then
+            git add ${{ inputs.container }}/VERSION.deps
+          fi
+          if ! git diff --cached --quiet; then
+            git commit -m "Bump ${{ inputs.container }} version to ${{ steps.vars.outputs.tag }}" || true
+            git push
+          fi
 
       - name: Tag and push to GHCR
         if: ${{ inputs.push }}

@@ -1,15 +1,15 @@
-name: CI — Fileflows
+name: CI — Mineru
 
 on:
   pull_request:
     paths:
-      - "fileflows/**"
+      - "mineru/**"
       - ".github/workflows/**"
 
 jobs:
   build:
     uses: ./.github/workflows/build.yaml
     with:
-      container: "fileflows"
+      container: "mineru"
       push: false
     secrets: inherit

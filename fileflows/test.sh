@@ -15,56 +15,65 @@ YELLOW='\033[0;33m'
 BOLD='\033[1m'
 RESET='\033[0m'
 
-pass() { PASS=$((PASS + 1)); echo -e "  ${GREEN}✓${RESET} $1"; }
-fail() { FAIL=$((FAIL + 1)); echo -e "  ${RED}✗${RESET} $1: $2"; }
-skip() { SKIP=$((SKIP + 1)); echo -e "  ${YELLOW}⊘${RESET} $1: $2"; }
+pass() {
+  PASS=$((PASS + 1))
+  echo -e "  ${GREEN}✓${RESET} $1"
+}
+fail() {
+  FAIL=$((FAIL + 1))
+  echo -e "  ${RED}✗${RESET} $1: $2"
+}
+skip() {
+  SKIP=$((SKIP + 1))
+  echo -e "  ${YELLOW}⊘${RESET} $1: $2"
+}
 
 check_binary() {
-    local name="$1" path="$2"
-    if [ -f "$path" ]; then
-        pass "$name found at $path"
-    else
-        fail "$name" "not found at $path"
-    fi
+  local name="$1" path="$2"
+  if [ -f "$path" ]; then
+    pass "$name found at $path"
+  else
+    fail "$name" "not found at $path"
+  fi
 }
 
 check_lib() {
-    local name="$1" path="$2"
-    if [ -f "$path" ]; then
-        pass "$name present"
-    else
-        fail "$name" "not found at $path"
-    fi
+  local name="$1" path="$2"
+  if [ -f "$path" ]; then
+    pass "$name present"
+  else
+    fail "$name" "not found at $path"
+  fi
 }
 
 check_version() {
-    local name="$1"
-    shift
-    local output
-    if output=$("$@" 2>&1); then
-        if [ -n "$output" ]; then
-            pass "$name version check OK"
-        else
-            fail "$name" "empty output"
-        fi
+  local name="$1"
+  shift
+  local output
+  if output=$("$@" 2>&1); then
+    if [ -n "$output" ]; then
+      pass "$name version check OK"
     else
-        fail "$name" "exit code $?"
+      fail "$name" "empty output"
     fi
+  else
+    fail "$name" "exit code $?"
+  fi
 }
 
 check_functional() {
-    local name="$1" file="$2" min_size="${3:-100}"
-    if [ -f "$file" ]; then
-        local size
-        size=$(stat -c%s "$file" 2>/dev/null || echo 0)
-        if [ "$size" -ge "$min_size" ]; then
-            pass "$name (${size} bytes)"
-        else
-            fail "$name" "file too small (${size} bytes)"
-        fi
+  local name="$1" file="$2" min_size="${3:-100}"
+  if [ -f "$file" ]; then
+    local size
+    size=$(stat -c%s "$file" 2>/dev/null || echo 0)
+    if [ "$size" -ge "$min_size" ]; then
+      pass "$name (${size} bytes)"
     else
-        fail "$name" "output file not created"
+      fail "$name" "file too small (${size} bytes)"
     fi
+  else
+    fail "$name" "output file not created"
+  fi
 }
 
 # ============================================================================
@@ -73,12 +82,12 @@ echo -e "\n${BOLD}=== FileFlows Smoke Tests ===${RESET}\n"
 # --- Generate test video ---
 echo -e "${BOLD}[Setup]${RESET} Generating test video..."
 ffmpeg -v error -f lavfi -i "testsrc=duration=2:size=640x360:rate=24" \
-    -f lavfi -i "sine=frequency=1000:duration=2" \
-    -c:v libx264 -preset ultrafast -c:a aac -y "$WORKDIR/test.mp4"
+  -f lavfi -i "sine=frequency=1000:duration=2" \
+  -c:v libx264 -preset ultrafast -c:a aac -y "$WORKDIR/test.mp4"
 
 if [ ! -f "$WORKDIR/test.mp4" ]; then
-    echo -e "${RED}FATAL: Could not generate test video${RESET}"
-    exit 1
+  echo -e "${RED}FATAL: Could not generate test video${RESET}"
+  exit 1
 fi
 pass "Test video generated"
 
@@ -101,9 +110,9 @@ check_lib "libbestsource.so" "/usr/local/lib/vapoursynth/bestsource.so"
 check_lib "libvszip.so (SSIM2)" "/usr/local/lib/vapoursynth/libvszip.so"
 
 if ls /usr/local/lib/vapoursynth/*vship*.so >/dev/null 2>&1; then
-    pass "Vship plugins present"
+  pass "Vship plugins present"
 else
-    fail "Vship plugins" "no *vship*.so found in /usr/local/lib/vapoursynth/"
+  fail "Vship plugins" "no *vship*.so found in /usr/local/lib/vapoursynth/"
 fi
 
 # ============================================================================
@@ -117,9 +126,9 @@ check_version "vspipe" vspipe --version
 # ============================================================================
 echo -e "\n${BOLD}[VapourSynth]${RESET}"
 if python3 -c "import vapoursynth" 2>/dev/null; then
-    pass "VapourSynth Python import OK"
+  pass "VapourSynth Python import OK"
 else
-    fail "VapourSynth Python import" "failed"
+  fail "VapourSynth Python import" "failed"
 fi
 
 # ============================================================================
@@ -134,19 +143,19 @@ check_functional "ffmpeg h264 encode" "$WORKDIR/out_h264.mp4"
 check_functional "ffmpeg-static encode" "$WORKDIR/out_btbn.mp4"
 
 # SVT-AV1 raw encode (Y4M pipe)
-ffmpeg -v error -i "$WORKDIR/test.mp4" -t 1 -f yuv4mpegpipe -pix_fmt yuv420p - | \
-    SvtAv1EncApp -i stdin -b "$WORKDIR/out_svt.ivf" -n 24 --preset 12 2>/dev/null
+ffmpeg -v error -i "$WORKDIR/test.mp4" -t 1 -f yuv4mpegpipe -pix_fmt yuv420p - |
+  SvtAv1EncApp -i stdin -b "$WORKDIR/out_svt.ivf" -n 24 --preset 12 2>/dev/null
 check_functional "SVT-AV1 raw encode" "$WORKDIR/out_svt.ivf"
 
 # ab-av1 encode
-if ab-av1 encode -i "$WORKDIR/test.mp4" -o "$WORKDIR/out_abav1.mp4" --crf 30 2>/dev/null; then
-    check_functional "ab-av1 encode" "$WORKDIR/out_abav1.mp4"
+if /app/common/ab-av1/ab-av1 encode -i "$WORKDIR/test.mp4" -o "$WORKDIR/out_abav1.mp4" --crf 30 2>/dev/null; then
+  check_functional "ab-av1 encode" "$WORKDIR/out_abav1.mp4"
 else
-    fail "ab-av1" "encode failed"
+  fail "ab-av1" "encode failed"
 fi
 
 # VapourSynth + vspipe test
-cat > "$WORKDIR/test.vpy" << 'VPY'
+cat >"$WORKDIR/test.vpy" <<'VPY'
 import vapoursynth as vs
 core = vs.core
 clip = core.ffms2.Source(r"%%INPUT%%")
@@ -155,14 +164,14 @@ VPY
 sed -i "s|%%INPUT%%|$WORKDIR/test.mp4|" "$WORKDIR/test.vpy"
 
 if vspipe -c y4m "$WORKDIR/test.vpy" "$WORKDIR/out_vpy.y4m" 2>/dev/null; then
-    check_functional "VapourSynth + vspipe pipeline" "$WORKDIR/out_vpy.y4m" 1000
+  check_functional "VapourSynth + vspipe pipeline" "$WORKDIR/out_vpy.y4m" 1000
 else
-    fail "VapourSynth + vspipe pipeline" "vspipe failed"
+  fail "VapourSynth + vspipe pipeline" "vspipe failed"
 fi
 
 # av1an encode
 av1an -i "$WORKDIR/test.mp4" -e svt-av1 -o "$WORKDIR/out_av1an.mkv" \
-    --force --keep --temp "$WORKDIR/av1an-temp" 2>/dev/null
+  --force --keep --temp "$WORKDIR/av1an-temp" 2>/dev/null
 check_functional "av1an encode" "$WORKDIR/out_av1an.mkv"
 
 # ============================================================================
@@ -170,15 +179,15 @@ echo -e "\n${BOLD}[Runtime]${RESET}"
 
 dotnet_ver=$(/dotnet/dotnet --version 2>/dev/null || echo "unknown")
 if [[ "$dotnet_ver" == 8.* ]]; then
-    pass ".NET version $dotnet_ver"
+  pass ".NET version $dotnet_ver"
 else
-    fail ".NET" "expected 8.x, got $dotnet_ver"
+  fail ".NET" "expected 8.x, got $dotnet_ver"
 fi
 
 if [ -x "/app/docker-entrypoint.sh" ]; then
-    pass "docker-entrypoint.sh is executable"
+  pass "docker-entrypoint.sh is executable"
 else
-    fail "docker-entrypoint.sh" "missing or not executable"
+  fail "docker-entrypoint.sh" "missing or not executable"
 fi
 
 # ============================================================================
@@ -187,6 +196,6 @@ echo -e "${BOLD}=== Results: ${GREEN}${PASS} passed${RESET}, ${RED}${FAIL} faile
 echo ""
 
 if [ "$FAIL" -gt 0 ]; then
-    exit 1
+  exit 1
 fi
 exit 0

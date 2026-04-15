@@ -7,12 +7,16 @@ RUN apt-get update && \
     fonts-noto-core \
     fonts-noto-cjk \
     fontconfig \
-    libgl1 && \
+    libgl1 \
+    libglib2.0-0 \
+    curl && \
     fc-cache -fv && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-RUN pip install --no-cache-dir 'mineru[api]>=2.7.1'
+# renovate: datasource=pypi depName=mineru
+ARG MINERU_VERSION=2.7.1
+RUN pip install --no-cache-dir "mineru[api]>=${MINERU_VERSION}"
 
 
 ENV MINERU_MODEL_SOURCE=local
