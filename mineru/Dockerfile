@@ -21,4 +21,6 @@ RUN pip install --no-cache-dir "mineru[api]==${MINERU_VERSION}"
 
 ENV MINERU_MODEL_SOURCE=local
 
+EXPOSE 8000/tcp
+
 CMD ["mineru-api", "--host", "0.0.0.0"]
