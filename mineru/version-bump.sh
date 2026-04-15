@@ -9,9 +9,9 @@ CURRENT="$1"
 SCRIPT_DIR="$(dirname "$0")"
 DOCKERFILE="$SCRIPT_DIR/Dockerfile"
 
-# Extract mineru version from Dockerfile pip install line
-# Look for: pip install --no-cache-dir 'mineru[api]>=X.Y.Z'
-VERSION=$(grep -oP "pip install --no-cache-dir 'mineru\[api\]>=\K[0-9]+\.[0-9]+\.[0-9]+" "$DOCKERFILE")
+# Extract mineru version from Dockerfile ARG line
+# Look for: ARG MINERU_VERSION=X.Y.Z
+VERSION=$(grep -oP "ARG MINERU_VERSION=\K[0-9]+\.[0-9]+\.[0-9]+" "$DOCKERFILE")
 
 if [ -z "$VERSION" ]; then
     echo "Error: Could not extract mineru version from Dockerfile" >&2
