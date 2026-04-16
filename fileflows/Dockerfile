@@ -17,13 +17,15 @@ RUN apt-get update && \
 ENV PKG_CONFIG_PATH="/usr/local/lib/pkgconfig"
 
 # Install Rust (needed for Av1an)
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable && \
+    rm -rf /root/.cargo/registry /root/.cargo/git /root/.cargo/.package-cache
 ENV PATH="/root/.cargo/bin:${PATH}"
 
 # Install wild linker for Rust
 RUN cargo install --locked wild-linker && \
     mkdir -p /root/.cargo && \
-    printf '[target.x86_64-unknown-linux-gnu]\nlinker = "clang"\nrustflags = ["-Clink-arg=--ld-path=wild"]\n' > /root/.cargo/config.toml
+    printf '[target.x86_64-unknown-linux-gnu]\nlinker = "clang"\nrustflags = ["-Clink-arg=--ld-path=wild"]\n' > /root/.cargo/config.toml && \
+    rm -rf /root/.cargo/registry /root/.cargo/git
 
 # ============================================================================
 # INDEPENDENT COMPONENTS - Can be built in parallel, no dependencies
@@ -148,7 +150,7 @@ RUN git clone https://github.com/master-of-zen/Av1an.git /tmp/Av1an && \
     cargo build --release && \
     cp target/release/av1an /usr/local/bin/ && \
     chmod +x /usr/local/bin/av1an && \
-    rm -rf /tmp/Av1an
+    rm -rf /tmp/Av1an /root/.cargo/registry /root/.cargo/git
 
 # ============================================================================
 # FINAL RUNTIME STAGE
@@ -159,11 +161,11 @@ ARG DEBIAN_FRONTEND=noninteractive
 
 # Install runtime packages
 RUN apt-get update && \
-    apt-get install -y sudo tzdata wget ca-certificates gnupg curl tar xz-utils zstd libssl-dev apt-transport-https openssl locales libfontconfig1 libfreetype6 pciutils vainfo \
-    python3 python3-pip libffms2-5 libgomp1 rar unrar imagemagick mkvtoolnix libvulkan1 libvulkan-dev mesa-vulkan-drivers && \
+    apt-get install -y --no-install-recommends \
+    wget curl gnupg ca-certificates python3 libpython3.12 libffms2-5 libgomp1 rar unrar imagemagick mkvtoolnix libvulkan1 libvulkan-dev mesa-vulkan-drivers && \
     mkdir -p /usr/local/lib/vapoursynth && \
     ln -s /usr/lib/x86_64-linux-gnu/libffms2.so.5 /usr/local/lib/vapoursynth/libffms2.so && \
-    rm -rf /var/lib/apt/lists/*
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # Install .NET 8
 RUN wget https://dot.net/v1/dotnet-install.sh && \
