@@ -107,7 +107,6 @@ echo -e "\n${BOLD}[Libraries]${RESET}"
 check_lib "libvapoursynth.so" "/usr/local/lib/libvapoursynth.so"
 check_lib "libzimg.so" "/usr/local/lib/libzimg.so"
 check_lib "libbestsource.so" "/usr/local/lib/vapoursynth/bestsource.so"
-check_lib "libvszip.so (SSIM2)" "/usr/local/lib/vapoursynth/libvszip.so"
 
 if ls /usr/local/lib/vapoursynth/*vship*.so >/dev/null 2>&1; then
   pass "Vship plugins present"

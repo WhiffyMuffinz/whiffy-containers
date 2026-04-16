@@ -4,26 +4,28 @@
 # ============================================================================
 # SHARED BASE STAGE - Common build dependencies
 # ============================================================================
-FROM nvidia/cuda:13.0.2-devel-ubuntu24.04@sha256:5dc1bca23d05bd37b011be68ec470c03b403a5da07ec3a86e41af9470e9d0cc6 AS base
+FROM docker.io/ubuntu:24.04@sha256:c4a8d5503dfb2a3eb8ab5f807da5bc69a85730fb49b5cfca2330194ebcc41c7b AS base
 
 ARG DEBIAN_FRONTEND=noninteractive
 
 # Install common build dependencies (shared across all builder stages)
 RUN apt-get update && \
     apt-get install -y sudo tzdata wget ca-certificates gnupg curl tar xz-utils zstd libssl-dev apt-transport-https openssl locales libfontconfig1 libfreetype6 pciutils vainfo git cmake llvm \
-    build-essential autoconf automake libtool pkg-config nasm meson ninja-build python3-dev python3-venv python3-setuptools libavformat-dev libavfilter-dev libavdevice-dev libavcodec-dev libswscale-dev libxxhash-dev clang && \
+    build-essential autoconf automake libtool pkg-config nasm meson ninja-build python3-dev python3-venv python3-setuptools libvulkan1 libvulkan-dev mesa-vulkan-drivers libavformat-dev libavfilter-dev libavdevice-dev libavcodec-dev libswscale-dev libxxhash-dev clang && \
     rm -rf /var/lib/apt/lists/*
 
 ENV PKG_CONFIG_PATH="/usr/local/lib/pkgconfig"
 
 # Install Rust (needed for Av1an)
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable && \
+    rm -rf /root/.cargo/registry /root/.cargo/git /root/.cargo/.package-cache
 ENV PATH="/root/.cargo/bin:${PATH}"
 
 # Install wild linker for Rust
 RUN cargo install --locked wild-linker && \
     mkdir -p /root/.cargo && \
-    printf '[target.x86_64-unknown-linux-gnu]\nlinker = "clang"\nrustflags = ["-Clink-arg=--ld-path=wild"]\n' > /root/.cargo/config.toml
+    printf '[target.x86_64-unknown-linux-gnu]\nlinker = "clang"\nrustflags = ["-Clink-arg=--ld-path=wild"]\n' > /root/.cargo/config.toml && \
+    rm -rf /root/.cargo/registry /root/.cargo/git
 
 # ============================================================================
 # INDEPENDENT COMPONENTS - Can be built in parallel, no dependencies
@@ -121,23 +123,6 @@ RUN git clone https://github.com/vapoursynth/bestsource.git /tmp/bestsource --re
     ninja -C build install && \
     rm -rf /tmp/bestsource
 
-# --- Stage: SSIM2 CPU (depends on vapoursynth + Zig) ---
-FROM vapoursynth AS ssim2
-ARG ZIG_VERSION=0.15.2
-# Install Zig (only needed for SSIM2)
-RUN mkdir -p /opt/zig && \
-    wget "https://ziglang.org/download/${ZIG_VERSION}/zig-x86_64-linux-${ZIG_VERSION}.tar.xz" && \
-    tar -xf "zig-x86_64-linux-${ZIG_VERSION}.tar.xz" -C /opt/zig && \
-    rm "zig-x86_64-linux-${ZIG_VERSION}.tar.xz"
-ENV PATH="/opt/zig/zig-x86_64-linux-${ZIG_VERSION}:${PATH}"
-RUN git clone https://github.com/dnjulek/vapoursynth-zip /tmp/vapoursynth-zip && \
-    cd /tmp/vapoursynth-zip && \
-    git checkout R13 && \
-    /opt/zig/zig-x86_64-linux-${ZIG_VERSION}/zig build -Doptimize=ReleaseFast && \
-    mkdir -p /usr/local/lib/vapoursynth && \
-    cp zig-out/lib/libvszip.so /usr/local/lib/vapoursynth && \
-    rm -rf /tmp/vapoursynth-zip
-
 # --- Stage: Vship GPU SSIM2 (depends on vapoursynth + CUDA) ---
 FROM vapoursynth AS vship
 # renovate: datasource=forgejo-releases depName=Line-fr/Vship registryUrl=https://codeberg.org versioning=semver-coerced
@@ -145,9 +130,10 @@ ARG VSHIP_VERSION=v5.0.0
 RUN git clone https://codeberg.org/Line-fr/Vship.git /tmp/Vship && \
     cd /tmp/Vship && \
     git checkout ${VSHIP_VERSION} && \
-    make buildcudaall && \
+    make buildVulkan && \
+    make install PREFIX=/usr && \
     mkdir -p /usr/local/lib/vapoursynth && \
-    find . -name "*.so" -exec cp {} /usr/local/lib/vapoursynth/ \; && \
+    cp libvship*.so /usr/local/lib/vapoursynth/ 2>/dev/null || true && \
     rm -rf /tmp/Vship
 
 # --- Stage: Av1an (depends on Rust + VapourSynth) ---
@@ -164,22 +150,22 @@ RUN git clone https://github.com/master-of-zen/Av1an.git /tmp/Av1an && \
     cargo build --release && \
     cp target/release/av1an /usr/local/bin/ && \
     chmod +x /usr/local/bin/av1an && \
-    rm -rf /tmp/Av1an
+    rm -rf /tmp/Av1an /root/.cargo/registry /root/.cargo/git
 
 # ============================================================================
 # FINAL RUNTIME STAGE
 # ============================================================================
-FROM nvidia/cuda:13.0.2-runtime-ubuntu24.04@sha256:6a0e31b59e70890446f2c17356d6efc0d54260090a8c63d6ca7c2ad049db95d2 AS final
+FROM docker.io/ubuntu:24.04@sha256:c4a8d5503dfb2a3eb8ab5f807da5bc69a85730fb49b5cfca2330194ebcc41c7b  AS final
 
 ARG DEBIAN_FRONTEND=noninteractive
 
 # Install runtime packages
 RUN apt-get update && \
-    apt-get install -y sudo tzdata wget ca-certificates gnupg curl tar xz-utils zstd libssl-dev apt-transport-https openssl locales libfontconfig1 libfreetype6 pciutils vainfo \
-    python3 python3-pip libffms2-5 libgomp1 rar unrar imagemagick mkvtoolnix && \
+    apt-get install -y --no-install-recommends \
+    wget curl gnupg ca-certificates python3 libpython3.12 libffms2-5 libgomp1 rar unrar imagemagick mkvtoolnix libvulkan1 libvulkan-dev mesa-vulkan-drivers && \
     mkdir -p /usr/local/lib/vapoursynth && \
     ln -s /usr/lib/x86_64-linux-gnu/libffms2.so.5 /usr/local/lib/vapoursynth/libffms2.so && \
-    rm -rf /var/lib/apt/lists/*
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # Install .NET 8
 RUN wget https://dot.net/v1/dotnet-install.sh && \
@@ -211,10 +197,11 @@ COPY --from=svt-av1 /usr/local/bin/SvtAv1EncApp /usr/local/bin/SvtAv1EncApp
 COPY --from=av1an /usr/local/bin/av1an /usr/local/bin/av1an
 COPY --from=vapoursynth /usr/local/bin/vspipe /usr/local/bin/vspipe
 
-# Copy compiled libraries from vapoursynth stage (includes zimg, vapoursynth, bestsource, ssim2, vship)
+# Copy compiled libraries from vapoursynth stage (includes zimg, vapoursynth, bestsource)
 COPY --from=vapoursynth /usr/local/lib /usr/local/lib
 COPY --from=bestsource /usr/local/lib/vapoursynth /usr/local/lib/vapoursynth
-COPY --from=ssim2 /usr/local/lib/vapoursynth/libvszip.so /usr/local/lib/vapoursynth/libvszip.so
+
+# Copy Vship VapourSynth plugins
 COPY --from=vship /usr/local/lib/vapoursynth/ /usr/local/lib/vapoursynth/
 
 # Copy Python packages (VapourSynth bindings)
