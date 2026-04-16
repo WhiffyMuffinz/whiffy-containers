@@ -4,7 +4,7 @@
 # ============================================================================
 # SHARED BASE STAGE - Common build dependencies
 # ============================================================================
-FROM nvidia/cuda:13.0.2-devel-ubuntu24.04 AS base
+FROM nvidia/cuda:13.0.2-devel-ubuntu24.04@sha256:5dc1bca23d05bd37b011be68ec470c03b403a5da07ec3a86e41af9470e9d0cc6 AS base
 
 ARG DEBIAN_FRONTEND=noninteractive
 
@@ -51,7 +51,7 @@ RUN curl -L -o /tmp/ab-av1.tar.zst "https://github.com/alexheretic/ab-av1/releas
 # --- Stage: dovi_tool ---
 FROM base AS dovi-tool
 # renovate: datasource=github-releases depName=quietvoid/dovi_tool versioning=semver-coerced
-ARG DOVI_TOOL_VERSION=2.3.1
+ARG DOVI_TOOL_VERSION=2.3.2
 RUN curl -L "https://github.com/quietvoid/dovi_tool/releases/download/${DOVI_TOOL_VERSION}/dovi_tool-${DOVI_TOOL_VERSION}-x86_64-unknown-linux-musl.tar.gz" | \
     tar -xzvf - -C /usr/local/bin
 
@@ -171,7 +171,7 @@ RUN git clone https://github.com/master-of-zen/Av1an.git /tmp/Av1an && \
 # ============================================================================
 # FINAL RUNTIME STAGE
 # ============================================================================
-FROM nvidia/cuda:13.0.2-runtime-ubuntu24.04 AS final
+FROM nvidia/cuda:13.0.2-runtime-ubuntu24.04@sha256:6a0e31b59e70890446f2c17356d6efc0d54260090a8c63d6ca7c2ad049db95d2 AS final
 
 ARG DEBIAN_FRONTEND=noninteractive
 
@@ -234,7 +234,7 @@ ENV DOTNET_CLI_TELEMETRY_OPTOUT=true
 ENV PATH=/dotnet:/dotnet/tools:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/opt/ffmpeg-static/bin
 
 # Copy application code from the appdata stage
-COPY --from=revenz/fileflows:26.04 /app /app
+COPY --from=revenz/fileflows:26.04@sha256:429b37d3beecc4bdda3acaf640d0b5d47ee54fc2350aec77237af1b528bb03fe /app /app
 
 # Make entrypoint script executable
 RUN chmod +x /app/docker-entrypoint.sh
