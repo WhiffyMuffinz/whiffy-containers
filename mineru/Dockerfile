@@ -15,7 +15,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/*
 
 # renovate: datasource=pypi depName=mineru
-ARG MINERU_VERSION=3.0.9
+ARG MINERU_VERSION=3.1.0
 RUN pip install --no-cache-dir "mineru[api]==${MINERU_VERSION}"
 
 
