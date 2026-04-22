@@ -1,0 +1,13 @@
+name: CI — Gate
+
+on:
+  pull_request:
+    paths-ignore:
+      - "fileflows/**"
+      - "mineru/**"
+
+jobs:
+  status:
+    name: Build Success
+    steps:
+      - run: echo "All jobs passed or skipped"

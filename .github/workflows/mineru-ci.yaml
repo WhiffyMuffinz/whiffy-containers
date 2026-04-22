@@ -13,3 +13,17 @@ jobs:
       container: "mineru"
       push: false
     secrets: inherit
+
+  status:
+    if: ${{ !cancelled() }}
+    name: Build Success
+    needs:
+      - build
+    steps:
+      - name: Any jobs failed?
+        if: ${{ contains(needs.*.result, 'failure') }}
+        run: exit 1
+
+      - name: All jobs passed or skipped?
+        if: ${{ !(contains(needs.*.result, 'failure')) }}
+        run: echo "All jobs passed or skipped"
