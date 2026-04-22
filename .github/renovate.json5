@@ -28,7 +28,7 @@
     {
       "matchUpdateTypes": ["minor", "patch", "digest"],
       "excludeDepNames": ["python"],
-      "automerge": false
+      "automerge": true
     }
   ]
 }
