@@ -200,6 +200,7 @@ COPY --from=vapoursynth /usr/local/bin/vspipe /usr/local/bin/vspipe
 # Copy compiled libraries from vapoursynth stage (includes zimg, vapoursynth, bestsource)
 COPY --from=vapoursynth /usr/local/lib /usr/local/lib
 COPY --from=bestsource /usr/local/lib/vapoursynth /usr/local/lib/vapoursynth
+COPY --from=bestsource /usr/local/lib/x86_64-linux-gnu/libbestsource.so /usr/local/lib/
 
 # Copy Vship VapourSynth plugins
 COPY --from=vship /usr/local/lib/vapoursynth/ /usr/local/lib/vapoursynth/
