@@ -13,12 +13,3 @@ jobs:
       container: "mineru"
       push: false
     secrets: inherit
-  
-  ci-success:
-    needs: [build]
-    if: always()
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check all jobs passed
-        if: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}
-        run: exit 1
