@@ -8,6 +8,7 @@ on:
 
 jobs:
   status:
+    runs-on: actions-runners-containers
     name: Build Success
     steps:
       - run: echo "All jobs passed or skipped"
