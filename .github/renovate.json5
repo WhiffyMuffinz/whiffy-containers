@@ -1,34 +1,44 @@
 {
-  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["config:recommended"],
-  "dockerfile": {
-    "enabled": true
-  },
-  "pinDigests": true,
-  "customManagers": [
-    {
-      "customType": "regex",
-      "managerFilePatterns": [
-        "(^|/)Dockerfile$",
-        "/Dockerfile/",
-        "/Containerfile/"
-      ],
-      "matchStrings": [
-        "# renovate: datasource=(?<datasource>[^\\s]+) depName=(?<depName>[^\\s]+)(?: registryUrl=(?<registryUrl>[^\\s]+))?(?: versioning=(?<versioning>[^\\s]+))?(?: extractVersion=(?<extractVersion>[^\\s]+))?\\s+ARG [A-Z0-9_]+=(?<currentValue>[^\\s]+)"
-      ],
-      "datasourceTemplate": "{{datasource}}",
-      "depNameTemplate": "{{depName}}"
-    }
+  $schema: 'https://docs.renovatebot.com/renovate-schema.json',
+  extends: [
+    'config:recommended',
   ],
-  "packageRules": [
+  dockerfile: {
+    enabled: true,
+  },
+  pinDigests: true,
+  customManagers: [
     {
-      "matchDepNames": ["master-of-zen/Av1an"],
-      "allowedVersions": "/^v/"
+      customType: 'regex',
+      managerFilePatterns: [
+        '(^|/)Dockerfile$',
+        '/Dockerfile/',
+        '/Containerfile/',
+      ],
+      matchStrings: [
+        '# renovate: datasource=(?<datasource>[^\\s]+) depName=(?<depName>[^\\s]+)(?: registryUrl=(?<registryUrl>[^\\s]+))?(?: versioning=(?<versioning>[^\\s]+))?(?: extractVersion=(?<extractVersion>[^\\s]+))?\\s+ARG [A-Z0-9_]+=(?<currentValue>[^\\s]+)',
+      ],
+      datasourceTemplate: '{{datasource}}',
+      depNameTemplate: '{{depName}}',
+    },
+  ],
+  packageRules: [
+    {
+      matchDepNames: [
+        'master-of-zen/Av1an',
+      ],
+      allowedVersions: '/^v/',
     },
     {
-      "matchUpdateTypes": ["minor", "patch", "digest"],
-      "excludeDepNames": ["python"],
-      "automerge": true
-    }
-  ]
+      matchUpdateTypes: [
+        'minor',
+        'patch',
+        'digest',
+      ],
+      automerge: true,
+      matchDepNames: [
+        '!python',
+      ],
+    },
+  ],
 }
