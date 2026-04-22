@@ -24,6 +24,11 @@
     {
       "matchDepNames": ["master-of-zen/Av1an"],
       "allowedVersions": "/^v/"
+    },
+    {
+      "matchUpdateTypes": ["minor", "patch", "digest"],
+      "excludeDepNames": ["python"],
+      "automerge": true
     }
   ]
 }
