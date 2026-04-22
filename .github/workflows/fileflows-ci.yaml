@@ -15,6 +15,7 @@ jobs:
     secrets: inherit
 
   status:
+    runs-on: actions-runners-containers
     if: ${{ !cancelled() }}
     name: Build Success
     needs:
