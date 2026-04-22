@@ -14,6 +14,9 @@ jobs:
     runs-on: actions-runners-containers
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
 
       - name: Check if version bump needed
         id: vars
@@ -37,7 +40,7 @@ jobs:
           git add mineru/VERSION
           if ! git diff --cached --quiet; then
             git commit -m "Bump mineru version to ${{ steps.vars.outputs.tag }}"
-            git push
+            git push origin HEAD:${{ github.event.pull_request.head.ref }}
           fi
 
   build:
