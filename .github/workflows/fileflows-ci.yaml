@@ -1,5 +1,8 @@
 name: CI — Fileflows
 
+permissions:
+  contents: write
+
 on:
   pull_request:
     paths:
@@ -7,11 +10,45 @@ on:
       - ".github/workflows/**"
 
 jobs:
+  version-bump:
+    runs-on: actions-runners-containers
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+
+      - name: Check if version bump needed
+        id: vars
+        run: |
+          UPSTREAM=$(grep -oP '(?<=revenz/fileflows:)[^\s]+' fileflows/Dockerfile | tail -1)
+          CURRENT=$(cat fileflows/VERSION)
+          NEW_VERSION=$(/bin/bash fileflows/version-bump.sh "$CURRENT" "$UPSTREAM")
+          
+          if [ "$CURRENT" = "$NEW_VERSION" ]; then
+            echo "bump_needed=false" >> $GITHUB_OUTPUT
+          else
+            echo "bump_needed=true" >> $GITHUB_OUTPUT
+            echo "tag=${NEW_VERSION}" >> $GITHUB_OUTPUT
+            echo "$NEW_VERSION" > fileflows/VERSION
+          fi
+   
+      - name: Commit version update
+        if: steps.vars.outputs.bump_needed == 'true'
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "github-actions@github.com"
+          git add fileflows/VERSION
+          if [ -f "fileflows/VERSION.deps" ]; then git add fileflows/VERSION.deps; fi
+          if ! git diff --cached --quiet; then
+            git commit -m "Bump fileflows version to ${{ steps.vars.outputs.tag }}"
+            git push
+          fi
+
   build:
+    needs:
+      - version-bump
     uses: ./.github/workflows/build.yaml
     with:
       container: "fileflows"
-      push: false
+      push: true
     secrets: inherit
 
   status:

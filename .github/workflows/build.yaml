@@ -78,20 +78,6 @@ jobs:
             whiffy-test:${{ inputs.container }} \
             < ./${{ inputs.container }}/test.sh
 
-      - name: Commit version update
-        if: ${{ inputs.push }}
-        run: |
-          git config --global user.name "github-actions"
-          git config --global user.email "github-actions@github.com"
-          git add ${{ inputs.container }}/VERSION
-          if [ -f "${{ inputs.container }}/VERSION.deps" ]; then
-            git add ${{ inputs.container }}/VERSION.deps
-          fi
-          if ! git diff --cached --quiet; then
-            git commit -m "Bump ${{ inputs.container }} version to ${{ steps.vars.outputs.tag }}" || true
-            git push
-          fi
-
       - name: Tag and push to GHCR
         if: ${{ inputs.push }}
         env:
