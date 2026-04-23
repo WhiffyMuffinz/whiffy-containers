@@ -33,12 +33,17 @@
       matchUpdateTypes: [
         'minor',
         'patch',
-        'digest',
       ],
       automerge: true,
       matchDepNames: [
         '!python',
       ],
     },
+    {
+      matchUpdateTypes: [ 
+        'digest',
+      ],
+      automerge: true,
+    }
   ],
 }
