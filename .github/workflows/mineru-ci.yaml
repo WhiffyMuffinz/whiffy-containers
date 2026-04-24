@@ -1,5 +1,8 @@
 name: CI — Mineru
 
+permissions:
+  contents: write
+
 on:
   pull_request:
     paths:
