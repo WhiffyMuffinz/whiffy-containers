@@ -167,11 +167,8 @@ RUN apt-get update && \
     ln -s /usr/lib/x86_64-linux-gnu/libffms2.so.5 /usr/local/lib/vapoursynth/libffms2.so && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-# Install .NET 8
-RUN wget https://dot.net/v1/dotnet-install.sh && \
-    bash dotnet-install.sh -c 8.0 --install-dir /dotnet && \
-    rm -f dotnet-install.sh && \
-    chmod 775 /dotnet
+# Copy .NET from official image
+COPY --from=mcr.microsoft.com/dotnet/sdk:8.0 /usr/share/dotnet /dotnet
 
 # Install Jellyfin FFmpeg (System Default)
 RUN curl -fsSL https://repo.jellyfin.org/debian/jellyfin_team.gpg.key | gpg --dearmor --batch --yes -o /etc/apt/trusted.gpg.d/debian-jellyfin.gpg && \
