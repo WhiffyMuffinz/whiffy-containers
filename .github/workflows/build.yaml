@@ -110,10 +110,13 @@ jobs:
             git add ${{ inputs.container }}/VERSION.deps
           fi
           
-          git commit -m "chore(${{ inputs.container }}): bump version to ${{ steps.vars.outputs.tag }}"
-          # Push back to the source branch of the PR
-          git push origin HEAD:${{ github.head_ref }}
-
+          # Only commit and push if there are staged changes
+          if ! git diff --cached --quiet; then
+            git commit -m "chore(${{ inputs.container }}): bump version to ${{ steps.vars.outputs.tag }}"
+            git push origin HEAD:${{ github.head_ref }}
+          else
+            echo "No changes detected in VERSION file. Skipping commit."
+          fi
       - name: Tag and push to GHCR
         if: ${{ inputs.push }}
         env:
