@@ -1,4 +1,4 @@
-name: Build Mineru Container
+name:  Build & Push — Mineru
 
 permissions:
   contents: write
