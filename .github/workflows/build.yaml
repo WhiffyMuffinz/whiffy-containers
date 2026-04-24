@@ -87,22 +87,24 @@ jobs:
             private-key: ${{ secrets.VERSION_BOT_PRIVATE_KEY }}
 
       - name: Commit version update
-        if: ${{ inputs.push }}
-        env:
-            GH_TOKEN: ${{ steps.bot-token.outputs.token }}
+        if: ${{ steps.vars.outputs.will_commit == 'true' }}
         run: |
-          git config --global user.name "whiffy-version-bot[bot]"
-          git config --global user.email "whiffy-version-bot[bot]@users.noreply.github.com"
-          git remote set-url origin https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}
+          # Use the standard GitHub Actions Bot identity
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          
           git add ${{ inputs.container }}/VERSION
           if [ -f "${{ inputs.container }}/VERSION.deps" ]; then
             git add ${{ inputs.container }}/VERSION.deps
           fi
+          
+          # Only commit and push if there are staged changes
           if ! git diff --cached --quiet; then
-            git commit -m "Bump ${{ inputs.container }} version to ${{ steps.vars.outputs.tag }}"
-            git push
+            git commit -m "chore(${{ inputs.container }}): bump version to ${{ steps.vars.outputs.tag }}"
+            git push origin HEAD:${{ github.head_ref }}
+          else
+            echo "No changes detected in VERSION file. Skipping commit."
           fi
-
 
       - name: Tag and push to GHCR
         if: ${{ inputs.push }}
