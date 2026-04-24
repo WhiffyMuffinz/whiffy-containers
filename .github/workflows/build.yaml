@@ -81,7 +81,7 @@ jobs:
       - name: Generate bot token
         if: ${{ inputs.push }}
         id: bot-token
-        uses: actions/create-github-app-token@v1
+        uses: actions/create-github-app-token@d72941d797fd3113feb6b93fd0dec494b13a2547 # v1
         with:
             app-id: ${{ secrets.VERSION_BOT_APP_ID }}
             private-key: ${{ secrets.VERSION_BOT_PRIVATE_KEY }}
