@@ -90,6 +90,11 @@ jobs:
           tags: whiffy-test:${{ inputs.container }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          secrets: |
+            AWS_ACCESS_KEY_ID=${{ env.AWS_ACCESS_KEY_ID }}
+            AWS_SECRET_ACCESS_KEY=${{ env.AWS_SECRET_ACCESS_KEY }}
+            SCCACHE_BUCKET=${{ env.SCCACHE_BUCKET }}
+            SCCACHE_ENDPOINT=${{ env.SCCACHE_ENDPOINT }}
 
       - name: Smoke tests
         run: |
@@ -104,12 +109,12 @@ jobs:
           # Use the standard GitHub Actions Bot identity
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          
+
           git add ${{ inputs.container }}/VERSION
           if [ -f "${{ inputs.container }}/VERSION.deps" ]; then
             git add ${{ inputs.container }}/VERSION.deps
           fi
-          
+
           # Only commit and push if there are staged changes
           if ! git diff --cached --quiet; then
             git commit -m "chore(${{ inputs.container }}): bump version to ${{ steps.vars.outputs.tag }}"
@@ -120,7 +125,8 @@ jobs:
       - name: Tag and push to GHCR
         if: ${{ inputs.push }}
         env:
-          IMAGE: ghcr.io/${{ secrets.GHCR_USERNAME }}/whiffys-custom-${{ inputs.container }}
+          IMAGE: ghcr.io/${{ secrets.GHCR_USERNAME }}/whiffys-custom-${{ inputs.container
+            }}
           TAG: ${{ steps.vars.outputs.tag }}
         run: |
           docker tag whiffy-test:${{ inputs.container }} ${IMAGE}:${TAG}
