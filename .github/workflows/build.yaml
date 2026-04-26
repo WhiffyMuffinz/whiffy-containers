@@ -91,10 +91,10 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           secrets: |
-            AWS_ACCESS_KEY_ID=${{ env.AWS_ACCESS_KEY_ID }}
-            AWS_SECRET_ACCESS_KEY=${{ env.AWS_SECRET_ACCESS_KEY }}
-            SCCACHE_BUCKET=${{ env.SCCACHE_BUCKET }}
-            SCCACHE_ENDPOINT=${{ env.SCCACHE_ENDPOINT }}
+            AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}
+            AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}
+            SCCACHE_BUCKET=${{ secrets.SCCACHE_BUCKET }}
+            SCCACHE_ENDPOINT=${{ secrets.SCCACHE_ENDPOINT }}
 
       - name: Smoke tests
         run: |
