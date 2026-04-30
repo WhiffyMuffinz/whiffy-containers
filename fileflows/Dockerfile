@@ -92,7 +92,7 @@ RUN git clone https://gitlab.com/AOMediaCodec/SVT-AV1/ /tmp/svt-av1 && \
 # --- Stage: VapourSynth (depends on zimg) ---
 FROM zimg AS vapoursynth
 # renovate: datasource=github-tags depName=vapoursynth/vapoursynth versioning=regex:^R(?<major>\d+)$
-ARG VAPOURSYNTH_VERSION=R71
+ARG VAPOURSYNTH_VERSION=R75
 # Install Python packages needed for VapourSynth
 RUN apt-get update && apt-get install -y python3-dev python3-setuptools python3-pip && \
     pip install -U cython --break-system-packages && \
