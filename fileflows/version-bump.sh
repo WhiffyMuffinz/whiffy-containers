@@ -1,10 +1,9 @@
 #!/bin/bash
 # Version bump rules for fileflows
-# Usage: ./version-bump.sh <current_version> <upstream_version>
+# Usage: ./version-bump.sh <current_version>
 # Output: New version string
 
 CURRENT_VERSION="$1"
-UPSTREAM_VERSION="$2"
 
 # Get script directory
 SCRIPT_DIR="$(dirname "$0")"
