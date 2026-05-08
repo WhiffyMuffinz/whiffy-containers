@@ -44,29 +44,6 @@
         'digest',
       ],
       automerge: true,
-    },
-    // Bump fileflows/VERSION (and VERSION.deps) as part of Renovate's own commit,
-    // so CI never needs to push back to the branch (which breaks re-triggering).
-    {
-      matchFileNames: ['fileflows/Dockerfile'],
-      postUpgradeTasks: {
-        commands: [
-          'bash fileflows/version-bump.sh "$(cat fileflows/VERSION)" > /tmp/_ff_ver && mv /tmp/_ff_ver fileflows/VERSION',
-        ],
-        fileFilters: ['fileflows/VERSION', 'fileflows/VERSION.deps'],
-        executionMode: 'branch',
-      },
-    },
-    // Bump mineru/VERSION as part of Renovate's own commit.
-    {
-      matchFileNames: ['mineru/Dockerfile'],
-      postUpgradeTasks: {
-        commands: [
-          'bash mineru/version-bump.sh "$(cat mineru/VERSION)" > /tmp/_mn_ver && mv /tmp/_mn_ver mineru/VERSION',
-        ],
-        fileFilters: ['mineru/VERSION'],
-        executionMode: 'branch',
-      },
-    },
+    }
   ],
 }
