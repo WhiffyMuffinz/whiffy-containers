@@ -27,7 +27,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
-          # Fetch everything so we can compare the PR branch to main
+          # Use a PAT (not GITHUB_TOKEN) so that any commits pushed back to the
+          # branch during this workflow re-trigger pull_request:synchronize.
+          # GITHUB_TOKEN pushes are intentionally suppressed by GitHub to prevent
+          # infinite loops, but a PAT push is treated as a normal user push.
+          token: ${{ secrets.WORKFLOW_PAT }}
           ref: ${{ github.head_ref || github.ref }}
           fetch-depth: 0
 
@@ -59,17 +63,9 @@ jobs:
               echo "Check: VERSION file already updated in this PR. Skipping script."
             else
               echo "Check: VERSION file is untouched. Running version-bump.sh..."
+
+              NEW_VERSION=$(/bin/bash ${{ inputs.container }}/version-bump.sh "$CURRENT_VERSION")
               
-              # 1. Extract upstream version
-              UPSTREAM=$(grep -oP '(?<=revenz/fileflows:)[^\s]+' ${{ inputs.container }}/Dockerfile | tail -1)
-              if [ -z "$UPSTREAM" ]; then
-                UPSTREAM=$(grep -oP "(?<=mineru\[api\]>='?)[0-9.]+" ${{ inputs.container }}/Dockerfile | head -1)
-              fi
-              
-              # 2. Run your existing script
-              NEW_VERSION=$(/bin/bash ${{ inputs.container }}/version-bump.sh "$CURRENT_VERSION" "$UPSTREAM")
-              
-              # 3. Apply changes locally
               echo "$NEW_VERSION" > ${{ inputs.container }}/VERSION
               FINAL_TAG=$NEW_VERSION
               WILL_COMMIT=true
@@ -101,21 +97,21 @@ jobs:
       - name: Commit version update
         if: ${{ steps.vars.outputs.will_commit == 'true' }}
         run: |
-          # Use the standard GitHub Actions Bot identity
           git config --global user.name "github-actions[bot]"
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          
+
           git add ${{ inputs.container }}/VERSION
           if [ -f "${{ inputs.container }}/VERSION.deps" ]; then
             git add ${{ inputs.container }}/VERSION.deps
           fi
-          
-          # Only commit and push if there are staged changes
+
+          # Push using the PAT-authenticated remote set by the Checkout step.
+          # This fires pull_request:synchronize and re-triggers CI on the new HEAD.
           if ! git diff --cached --quiet; then
             git commit -m "chore(${{ inputs.container }}): bump version to ${{ steps.vars.outputs.tag }}"
             git push origin HEAD:${{ github.head_ref }}
           else
-            echo "No changes detected in VERSION file. Skipping commit."
+            echo "No changes to commit."
           fi
       - name: Tag and push to GHCR
         if: ${{ inputs.push }}
