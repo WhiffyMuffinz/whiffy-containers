@@ -115,9 +115,11 @@ RUN git clone https://github.com/vapoursynth/vapoursynth.git /tmp/vapoursynth &&
 FROM vapoursynth AS bestsource
 # renovate: datasource=github-tags depName=vapoursynth/bestsource versioning=regex:^R(?<major>\d+)$
 ARG BESTSOURCE_VERSION=R8
-RUN git clone https://github.com/vapoursynth/bestsource.git /tmp/bestsource --recurse-submodules --shallow-submodules --remote-submodules && \
+RUN git clone https://github.com/vapoursynth/bestsource.git /tmp/bestsource --no-recurse-submodules && \
     cd /tmp/bestsource && \
     git checkout ${BESTSOURCE_VERSION} && \
+    git config --file .gitmodules submodule.libp2p.url https://github.com/sekrit-twc/libp2p.git && \
+    git submodule update --init --recursive --depth 1 && \
     meson setup build || (cat build/meson-logs/meson-log.txt && exit 1) && \
     ninja -C build && \
     ninja -C build install && \
