@@ -1,7 +1,7 @@
 name: CI — Fileflows
 
 permissions:
-  contents: write
+  contents: read
 
 on:
   pull_request:
