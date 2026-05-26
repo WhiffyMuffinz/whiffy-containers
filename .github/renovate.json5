@@ -44,31 +44,6 @@
         'digest',
       ],
       automerge: true,
-    },
-    {
-      matchFileNames: ["fileflows/Dockerfile"],
-      postUpgradeTasks: {
-        commands: [
-          "bash fileflows/version-bump.sh \"$(cat fileflows/VERSION)\" > fileflows/VERSION.tmp && mv fileflows/VERSION.tmp fileflows/VERSION",
-        ],
-        fileFilters: [
-          "fileflows/VERSION",
-          "fileflows/VERSION.deps",
-        ],
-        executionMode: "branch",
-      },
-    },
-    {
-      matchFileNames: ["mineru/Dockerfile"],
-      postUpgradeTasks: {
-        commands: [
-          "bash mineru/version-bump.sh \"$(cat mineru/VERSION)\" > mineru/VERSION.tmp && mv mineru/VERSION.tmp mineru/VERSION",
-        ],
-        fileFilters: [
-          "mineru/VERSION",
-        ],
-        executionMode: "branch",
-      },
     }
   ],
 }
