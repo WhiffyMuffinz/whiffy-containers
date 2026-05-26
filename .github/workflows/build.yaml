@@ -99,9 +99,6 @@ jobs:
       - name: Commit version update
         if: ${{ steps.vars.outputs.will_commit == 'true' }}
         run: |
-          # Disable the persisting GITHUB_TOKEN authentication header so git uses our App token
-          git config --local --unset-all http.https://github.com/.extraheader || true
-
           git remote set-url origin "https://x-access-token:${{ steps.app-token.outputs.token }}@github.com/${{ github.repository }}.git"
           git config --global user.name "whiffy-version-bump-bot[bot]"
           git config --global user.email "${{ vars.VERSION_BOT_APP_ID }}+whiffy-version-bump-bot[bot]@users.noreply.github.com"
