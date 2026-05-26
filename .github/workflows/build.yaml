@@ -49,17 +49,27 @@ jobs:
           WILL_COMMIT=false
           FINAL_TAG=$CURRENT_VERSION
 
-          # Only bump version on main branch builds (push to GHCR)
-          if [ "${{ inputs.push }}" = "true" ]; then
-            # 1. Extract upstream version
-            UPSTREAM=$(grep -oP '(?<=revenz/fileflows:)[^\s]+' ${{ inputs.container }}/Dockerfile | tail -1)
-            if [ -z "$UPSTREAM" ]; then
-              UPSTREAM=$(grep -oP "(?<=mineru\[api\]>='?)[0-9.]+" ${{ inputs.container }}/Dockerfile | head -1)
-            fi
+          # Logic: Only attempt a bump if this is a Pull Request
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            # Ensure we have the base branch to compare against
+            git fetch origin ${{ github.base_ref }} --quiet
 
-            # 2. Run the version bump script
-            NEW_VERSION=$(/bin/bash ${{ inputs.container }}/version-bump.sh "$CURRENT_VERSION" "$UPSTREAM")
-            if [ "$NEW_VERSION" != "$CURRENT_VERSION" ]; then
+            # Check if the VERSION file has already been changed in this PR branch
+            if git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -q "${{ inputs.container }}/VERSION"; then
+              echo "Check: VERSION file already updated in this PR. Skipping script."
+            else
+              echo "Check: VERSION file is untouched. Running version-bump.sh..."
+              
+              # 1. Extract upstream version
+              UPSTREAM=$(grep -oP '(?<=revenz/fileflows:)[^\s]+' ${{ inputs.container }}/Dockerfile | tail -1)
+              if [ -z "$UPSTREAM" ]; then
+                UPSTREAM=$(grep -oP "(?<=mineru\[api\]>='?)[0-9.]+" ${{ inputs.container }}/Dockerfile | head -1)
+              fi
+              
+              # 2. Run your existing script
+              NEW_VERSION=$(/bin/bash ${{ inputs.container }}/version-bump.sh "$CURRENT_VERSION" "$UPSTREAM")
+              
+              # 3. Apply changes locally
               echo "$NEW_VERSION" > ${{ inputs.container }}/VERSION
               FINAL_TAG=$NEW_VERSION
               WILL_COMMIT=true
@@ -88,23 +98,12 @@ jobs:
             whiffy-test:${{ inputs.container }} \
             < ./${{ inputs.container }}/test.sh
 
-      - name: Generate app token for version commit
-        if: ${{ steps.vars.outputs.will_commit == 'true' }}
-        id: app-token
-        uses: actions/create-github-app-token@v2
-        with:
-          app-id: ${{ vars.VERSION_BOT_APP_ID }}
-          private-key: ${{ secrets.VERSION_BOT_PRIVATE_KEY }}
-
       - name: Commit version update
         if: ${{ steps.vars.outputs.will_commit == 'true' }}
         run: |
-          # Disable the persisting GITHUB_TOKEN authentication header so git uses our App token
-          git config --local --unset-all http.https://github.com/.extraheader || true
-
-          git remote set-url origin "https://x-access-token:${{ steps.app-token.outputs.token }}@github.com/${{ github.repository }}.git"
-          git config --global user.name "whiffy-version-bump-bot[bot]"
-          git config --global user.email "${{ vars.VERSION_BOT_APP_ID }}+whiffy-version-bump-bot[bot]@users.noreply.github.com"
+          # Use the standard GitHub Actions Bot identity
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           
           git add ${{ inputs.container }}/VERSION
           if [ -f "${{ inputs.container }}/VERSION.deps" ]; then
@@ -114,7 +113,7 @@ jobs:
           # Only commit and push if there are staged changes
           if ! git diff --cached --quiet; then
             git commit -m "chore(${{ inputs.container }}): bump version to ${{ steps.vars.outputs.tag }}"
-            git push origin HEAD:${{ github.ref_name }}
+            git push origin HEAD:${{ github.head_ref }}
           else
             echo "No changes detected in VERSION file. Skipping commit."
           fi
