@@ -170,7 +170,7 @@ RUN apt-get update && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # Copy .NET from official image
-COPY --from=mcr.microsoft.com/dotnet/sdk:8.0@sha256:620f35d30bd4f0e8d6e42a3e4c9454ae1b09cae89ced9d78bca1a133b60552da /usr/share/dotnet /dotnet
+COPY --from=mcr.microsoft.com/dotnet/sdk:8.0@sha256:d80fdd84f7e18eea12f8e45c52914f1353395009c95c41197178ea19944e6d48 /usr/share/dotnet /dotnet
 
 # Install Jellyfin FFmpeg (System Default)
 RUN curl -fsSL https://repo.jellyfin.org/debian/jellyfin_team.gpg.key | gpg --dearmor --batch --yes -o /etc/apt/trusted.gpg.d/debian-jellyfin.gpg && \
