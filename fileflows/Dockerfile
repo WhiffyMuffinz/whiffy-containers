@@ -164,7 +164,7 @@ ARG DEBIAN_FRONTEND=noninteractive
 # Install runtime packages
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-    wget curl gnupg ca-certificates python3 libpython3.12 libffms2-5 libgomp1 rar unrar imagemagick mkvtoolnix libvulkan1 libvulkan-dev mesa-vulkan-drivers && \
+    wget curl gnupg ca-certificates python3 libpython3.12 libffms2-5 libgomp1 rar unrar imagemagick mkvtoolnix libegl1 libvulkan1 libvulkan-dev mesa-vulkan-drivers && \
     mkdir -p /usr/local/lib/vapoursynth && \
     ln -s /usr/lib/x86_64-linux-gnu/libffms2.so.5 /usr/local/lib/vapoursynth/libffms2.so && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
