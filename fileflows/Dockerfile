@@ -88,7 +88,7 @@ RUN git clone https://gitlab.com/AOMediaCodec/SVT-AV1/ /tmp/svt-av1 && \
 # --- Stage: av-scenechange ---
 FROM base AS av-scenechange
 # renovate: datasource=github-releases depName=rust-av/av-scenechange versioning=semver-coerced
-ARG AV_SCENECCHANGE_VERSION=v0.24.1
+ARG AV_SCENECHANGE_VERSION=v0.24.1
 RUN apt-get update && apt-get install -y libffms2-dev && \
     rm -rf /var/lib/apt/lists/*
 RUN git clone https://github.com/rust-av/av-scenechange.git /tmp/av-scenechange && \
