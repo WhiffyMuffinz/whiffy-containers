@@ -23,7 +23,7 @@ extract_upstream_version() {
 # Extract dependency versions from Dockerfile
 extract_dep_versions() {
     local df="$1"
-    grep -oP 'ARG (AV1AN|AB_AV1|DOVI_TOOL|ZIMG|SVT|VAPOURSYNTH|BESTSOURCE|VSHIP)_VERSION=\K[^ ]+' "$df" | sort
+    grep -oP 'ARG (AV1AN|AB_AV1|DOVI_TOOL|ZIMG|SVT|VAPOURSYNTH|BESTSOURCE|VSHIP|AV_SCENECHANGE)_VERSION=\K[^ ]+' "$df" | sort
 }
 
 # Compute hash of dependency versions

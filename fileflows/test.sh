@@ -99,6 +99,7 @@ check_binary "ffmpeg-static (BtbN)" "/opt/ffmpeg-static/bin/ffmpeg"
 check_binary "ab-av1" "/usr/local/bin/ab-av1"
 check_binary "SvtAv1EncApp" "/usr/local/bin/SvtAv1EncApp"
 check_binary "av1an" "/usr/local/bin/av1an"
+check_binary "av-scenechange" "/usr/local/bin/av-scenechange"
 check_binary "vspipe" "/usr/local/bin/vspipe"
 check_binary "dotnet" "/dotnet/dotnet"
 
@@ -172,6 +173,13 @@ fi
 av1an -i "$WORKDIR/test.mp4" -e svt-av1 -o "$WORKDIR/out_av1an.mkv" \
   --force --keep --temp "$WORKDIR/av1an-temp" 2>/dev/null
 check_functional "av1an encode" "$WORKDIR/out_av1an.mkv"
+
+# av-scenechange detection
+if av-scenechange "$WORKDIR/test.mp4" -o "$WORKDIR/out_scenechange.json" 2>/dev/null; then
+  check_functional "av-scenechange detection" "$WORKDIR/out_scenechange.json"
+else
+  fail "av-scenechange" "detection failed"
+fi
 
 # ============================================================================
 echo -e "\n${BOLD}[Runtime]${RESET}"
