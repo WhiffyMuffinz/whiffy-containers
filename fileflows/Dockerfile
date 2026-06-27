@@ -85,6 +85,20 @@ RUN git clone https://gitlab.com/AOMediaCodec/SVT-AV1/ /tmp/svt-av1 && \
     if [ -f /tmp/svt-av1/Bin/Release/SvtAv1EncApp ]; then cp /tmp/svt-av1/Bin/Release/SvtAv1EncApp /usr/local/bin/; fi && \
     rm -rf /tmp/svt-av1
 
+# --- Stage: av-scenechange ---
+FROM base AS av-scenechange
+# renovate: datasource=github-releases depName=rust-av/av-scenechange versioning=semver-coerced
+ARG AV_SCENECHANGE_VERSION=v0.24.1
+RUN apt-get update && apt-get install -y libffms2-dev && \
+    rm -rf /var/lib/apt/lists/*
+RUN git clone https://github.com/rust-av/av-scenechange.git /tmp/av-scenechange && \
+    cd /tmp/av-scenechange && \
+    git checkout ${AV_SCENECCHANGE_VERSION} && \
+    cargo build --release --features ffms2 && \
+    cp target/release/av-scenechange /usr/local/bin/ && \
+    chmod +x /usr/local/bin/av-scenechange && \
+    rm -rf /tmp/av-scenechange /root/.cargo/registry /root/.cargo/git
+
 # ============================================================================
 # DEPENDENT COMPONENTS - Build after their dependencies
 # ============================================================================
@@ -194,6 +208,7 @@ RUN mkdir -p /app/common/ab-av1 && \
 COPY --from=dovi-tool /usr/local/bin/dovi_tool /usr/local/bin/dovi_tool
 COPY --from=svt-av1 /usr/local/bin/SvtAv1EncApp /usr/local/bin/SvtAv1EncApp
 COPY --from=av1an /usr/local/bin/av1an /usr/local/bin/av1an
+COPY --from=av-scenechange /usr/local/bin/av-scenechange /usr/local/bin/av-scenechange
 COPY --from=vapoursynth /usr/local/bin/vspipe /usr/local/bin/vspipe
 
 # Copy compiled libraries from vapoursynth stage (includes zimg, vapoursynth, bestsource)
