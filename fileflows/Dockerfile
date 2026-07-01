@@ -234,7 +234,7 @@ ENV DOTNET_CLI_TELEMETRY_OPTOUT=true
 ENV PATH=/dotnet:/dotnet/tools:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/opt/ffmpeg-static/bin
 
 # Copy application code from the appdata stage
-COPY --from=revenz/fileflows:26.06@sha256:0ad5ec5fcbf47cf62928a3768c2aadf0ecb8a500fa4163a13a33c07d221bb045 /app /app
+COPY --from=revenz/fileflows:26.06@sha256:377d3b7c05ba705ac0fe2b338c1f5eef9426d0493a0a91101de97071cbbc0b9b /app /app
 
 # Make entrypoint script executable
 RUN chmod +x /app/docker-entrypoint.sh
