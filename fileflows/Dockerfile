@@ -4,7 +4,7 @@
 # ============================================================================
 # SHARED BASE STAGE - Common build dependencies
 # ============================================================================
-FROM docker.io/ubuntu:24.04@sha256:786a8b558f7be160c6c8c4a54f9a57274f3b4fb1491cf65146521ae77ff1dc54 AS base
+FROM docker.io/ubuntu:24.04@sha256:4fbb8e6a8395de5a7550b33509421a2bafbc0aab6c06ba2cef9ebffbc7092d90 AS base
 
 ARG DEBIAN_FRONTEND=noninteractive
 
@@ -171,7 +171,7 @@ RUN git clone https://github.com/master-of-zen/Av1an.git /tmp/Av1an && \
 # ============================================================================
 # FINAL RUNTIME STAGE
 # ============================================================================
-FROM docker.io/ubuntu:24.04@sha256:786a8b558f7be160c6c8c4a54f9a57274f3b4fb1491cf65146521ae77ff1dc54  AS final
+FROM docker.io/ubuntu:24.04@sha256:4fbb8e6a8395de5a7550b33509421a2bafbc0aab6c06ba2cef9ebffbc7092d90  AS final
 
 ARG DEBIAN_FRONTEND=noninteractive
 
