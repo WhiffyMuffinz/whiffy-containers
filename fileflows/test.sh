@@ -177,10 +177,10 @@ check_functional "av1an encode" "$WORKDIR/out_av1an.mkv"
 echo -e "\n${BOLD}[Runtime]${RESET}"
 
 dotnet_ver=$(/dotnet/dotnet --version 2>/dev/null || echo "unknown")
-if [[ "$dotnet_ver" == 8.* ]]; then
+if [[ "$dotnet_ver" == 10.* ]]; then
   pass ".NET version $dotnet_ver"
 else
-  fail ".NET" "expected 8.x, got $dotnet_ver"
+  fail ".NET" "expected 10.x, got $dotnet_ver"
 fi
 
 if [ -x "/app/docker-entrypoint.sh" ]; then
