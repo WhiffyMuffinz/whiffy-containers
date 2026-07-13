@@ -236,6 +236,9 @@ ENV PATH=/dotnet:/dotnet/tools:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin
 # Copy application code from the appdata stage
 COPY --from=revenz/fileflows:26.07@sha256:5de919040e5dab62fb9fdba9fab106edf11da061835ff1db3f19ddd9fd3b6bff /app /app
 
+# Make entrypoint script executable
+RUN chmod +x /app/docker-entrypoint.sh
+
 # Expose port
 EXPOSE 5000/tcp
 
@@ -243,6 +246,4 @@ EXPOSE 5000/tcp
 WORKDIR /app
 
 # Set entrypoint
-# Defaults to server mode on port 5000 (override with FFPORT).
-# Set FFNODE=1 and SERVER_URL to run as a worker node instead.
-ENTRYPOINT ["sh", "-c", "if [ \"${FFNODE}\" = \"1\" ] && [ -n \"${SERVER_URL}\" ]; then exec dotnet /app/Node/FileFlows.Node.dll --server \"${SERVER_URL}\"; else exec dotnet /app/Server/FileFlows.Server.dll --urls=http://*:${FFPORT:-5000} --docker; fi"]
+ENTRYPOINT ["/app/docker-entrypoint.sh"]
