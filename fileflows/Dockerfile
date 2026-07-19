@@ -142,11 +142,11 @@ RUN git clone https://github.com/vapoursynth/bestsource.git /tmp/bestsource --no
 # --- Stage: Vship GPU SSIM2 (depends on vapoursynth + CUDA) ---
 FROM vapoursynth AS vship
 # renovate: datasource=forgejo-releases depName=Line-fr/Vship registryUrl=https://codeberg.org versioning=semver-coerced
-ARG VSHIP_VERSION=v5.0.2
+ARG VSHIP_VERSION=v5.1.0
 RUN git clone https://codeberg.org/Line-fr/Vship.git /tmp/Vship && \
     cd /tmp/Vship && \
     git checkout ${VSHIP_VERSION} && \
-    make buildVulkan && \
+    make build BACKEND=Vulkan && \
     make install PREFIX=/usr && \
     mkdir -p /usr/local/lib/vapoursynth && \
     cp libvship*.so /usr/local/lib/vapoursynth/ 2>/dev/null || true && \
