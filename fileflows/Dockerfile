@@ -146,7 +146,7 @@ ARG VSHIP_VERSION=v5.1.0
 RUN git clone https://codeberg.org/Line-fr/Vship.git /tmp/Vship && \
     cd /tmp/Vship && \
     git checkout ${VSHIP_VERSION} && \
-    make buildVulkan && \
+    make build BACKEND=Vulkan && \
     make install PREFIX=/usr && \
     mkdir -p /usr/local/lib/vapoursynth && \
     cp libvship*.so /usr/local/lib/vapoursynth/ 2>/dev/null || true && \
