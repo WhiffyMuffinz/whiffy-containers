@@ -16,10 +16,15 @@ RUN apt-get update && \
 
 ENV PKG_CONFIG_PATH="/usr/local/lib/pkgconfig"
 
+
+
+
 # Install Rust (needed for Av1an)
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable && \
-    rm -rf /root/.cargo/registry /root/.cargo/git /root/.cargo/.package-cache
-ENV PATH="/root/.cargo/bin:${PATH}"
+FROM rust:1.89@sha256:57407b378b2b6e07b48a6135a20c87cc22ea6e249c0acf6cb1833ead3cf116e9 AS rust
+COPY --from=rust /usr/local/cargo /usr/local/cargo
+COPY --from=rust /usr/local/rustup /usr/local/rustup
+RUN /usr/local/cargo/bin/rustup default stable
+ENV PATH="/usr/local/cargo/bin:${PATH}"
 
 # Install wild linker for Rust
 RUN cargo install --locked wild-linker && \
