@@ -4,6 +4,7 @@
 # ============================================================================
 # SHARED BASE STAGE - Common build dependencies
 # ============================================================================
+FROM rust:1.89@sha256:57407b378b2b6e07b48a6135a20c87cc22ea6e249c0acf6cb1833ead3cf116e9 AS rust
 FROM docker.io/ubuntu:24.04@sha256:4fbb8e6a8395de5a7550b33509421a2bafbc0aab6c06ba2cef9ebffbc7092d90 AS base
 
 ARG DEBIAN_FRONTEND=noninteractive
@@ -16,10 +17,14 @@ RUN apt-get update && \
 
 ENV PKG_CONFIG_PATH="/usr/local/lib/pkgconfig"
 
+
+
+
 # Install Rust (needed for Av1an)
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable && \
-    rm -rf /root/.cargo/registry /root/.cargo/git /root/.cargo/.package-cache
-ENV PATH="/root/.cargo/bin:${PATH}"
+COPY --from=rust /usr/local/cargo /usr/local/cargo
+COPY --from=rust /usr/local/rustup /usr/local/rustup
+RUN /usr/local/cargo/bin/rustup default stable
+ENV PATH="/usr/local/cargo/bin:${PATH}"
 
 # Install wild linker for Rust
 RUN cargo install --locked wild-linker && \
