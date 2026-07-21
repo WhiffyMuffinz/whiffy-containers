@@ -80,7 +80,7 @@ RUN git clone https://github.com/sekrit-twc/zimg.git /tmp/zimg && \
 # --- Stage: svt-av1 ---
 FROM base AS svt-av1
 # renovate: datasource=gitlab-releases depName=AOMediaCodec/SVT-AV1 versioning=semver-coerced
-ARG SVT_VERSION=v4.1.0
+ARG SVT_VERSION=v4.2.0
 RUN git clone https://gitlab.com/AOMediaCodec/SVT-AV1/ /tmp/svt-av1 && \
     cd /tmp/svt-av1 && \
     git checkout ${SVT_VERSION} && \
