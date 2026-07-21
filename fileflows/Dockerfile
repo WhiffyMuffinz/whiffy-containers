@@ -98,7 +98,7 @@ RUN apt-get update && apt-get install -y libffms2-dev && \
     rm -rf /var/lib/apt/lists/*
 RUN git clone https://github.com/rust-av/av-scenechange.git /tmp/av-scenechange && \
     cd /tmp/av-scenechange && \
-    git checkout ${AV_SCENECCHANGE_VERSION} && \
+    git checkout ${AV_SCENECHANGE_VERSION} && \
     cargo build --release --features ffms2 && \
     cp target/release/av-scenechange /usr/local/bin/ && \
     chmod +x /usr/local/bin/av-scenechange && \
