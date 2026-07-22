@@ -58,7 +58,7 @@ RUN curl -L -o /tmp/ab-av1.tar.zst "https://github.com/alexheretic/ab-av1/releas
 # --- Stage: dovi_tool ---
 FROM base AS dovi-tool
 # renovate: datasource=github-releases depName=quietvoid/dovi_tool versioning=semver-coerced
-ARG DOVI_TOOL_VERSION=2.3.2
+ARG DOVI_TOOL_VERSION=2.3.3
 RUN curl -L "https://github.com/quietvoid/dovi_tool/releases/download/${DOVI_TOOL_VERSION}/dovi_tool-${DOVI_TOOL_VERSION}-x86_64-unknown-linux-musl.tar.gz" | \
     tar -xzvf - -C /usr/local/bin
 
