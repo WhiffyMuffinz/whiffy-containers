@@ -1,5 +1,4 @@
-
-
+# syntax=docker/dockerfile:1
 
 # ============================================================================
 # SHARED BASE STAGE - Common build dependencies
@@ -10,12 +9,15 @@ FROM docker.io/ubuntu:24.04@sha256:4fbb8e6a8395de5a7550b33509421a2bafbc0aab6c06b
 ARG DEBIAN_FRONTEND=noninteractive
 
 # Install common build dependencies (shared across all builder stages)
-RUN apt-get update && \
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
+    apt-get update && \
     apt-get install -y sudo tzdata wget ca-certificates gnupg curl tar xz-utils zstd libssl-dev apt-transport-https openssl locales libfontconfig1 libfreetype6 pciutils vainfo git cmake llvm \
-    build-essential autoconf automake libtool pkg-config nasm meson ninja-build python3-dev python3-venv python3-setuptools libvulkan1 libvulkan-dev mesa-vulkan-drivers libavformat-dev libavfilter-dev libavdevice-dev libavcodec-dev libswscale-dev libxxhash-dev clang && \
-    rm -rf /var/lib/apt/lists/*
+    build-essential autoconf automake libtool pkg-config nasm meson ninja-build python3-dev python3-venv python3-setuptools libvulkan1 libvulkan-dev mesa-vulkan-drivers libavformat-dev libavfilter-dev libavdevice-dev libavcodec-dev libswscale-dev libxxhash-dev clang
 
 ENV PKG_CONFIG_PATH="/usr/local/lib/pkgconfig"
+ENV CFLAGS="-O3 -march=x86-64-v3"
+ENV CXXFLAGS="-O3 -march=x86-64-v3"
 
 
 
@@ -27,10 +29,11 @@ RUN /usr/local/cargo/bin/rustup default stable
 ENV PATH="/usr/local/cargo/bin:${PATH}"
 
 # Install wild linker for Rust
-RUN cargo install --locked wild-linker && \
+RUN --mount=type=cache,target=/root/.cargo/registry,sharing=locked \
+    --mount=type=cache,target=/root/.cargo/git,sharing=locked \
+    cargo install --locked wild-linker && \
     mkdir -p /root/.cargo && \
-    printf '[target.x86_64-unknown-linux-gnu]\nlinker = "clang"\nrustflags = ["-Clink-arg=--ld-path=wild"]\n' > /root/.cargo/config.toml && \
-    rm -rf /root/.cargo/registry /root/.cargo/git
+    printf '[target.x86_64-unknown-linux-gnu]\nlinker = "clang"\nrustflags = ["-Clink-arg=--ld-path=wild", "-Ctarget-cpu=x86-64-v3"]\n' > /root/.cargo/config.toml
 
 # ============================================================================
 # INDEPENDENT COMPONENTS - Can be built in parallel, no dependencies
@@ -66,10 +69,9 @@ RUN curl -L "https://github.com/quietvoid/dovi_tool/releases/download/${DOVI_TOO
 FROM base AS zimg
 # renovate: datasource=github-releases depName=sekrit-twc/zimg versioning=semver-coerced
 ARG ZIMG_VERSION=release-3.0.6
-RUN git clone https://github.com/sekrit-twc/zimg.git /tmp/zimg && \
+RUN git clone --depth 1 --branch ${ZIMG_VERSION} https://github.com/sekrit-twc/zimg.git /tmp/zimg && \
     cd /tmp/zimg && \
-    git checkout ${ZIMG_VERSION} && \
-    git submodule update --init --recursive && \
+    git submodule update --init --recursive --depth 1 && \
     ./autogen.sh && \
     ./configure --enable-shared && \
     make -j$(nproc) && \
@@ -81,9 +83,8 @@ RUN git clone https://github.com/sekrit-twc/zimg.git /tmp/zimg && \
 FROM base AS svt-av1
 # renovate: datasource=gitlab-releases depName=AOMediaCodec/SVT-AV1 versioning=semver-coerced
 ARG SVT_VERSION=v4.2.0
-RUN git clone https://gitlab.com/AOMediaCodec/SVT-AV1/ /tmp/svt-av1 && \
+RUN git clone --depth 1 --branch ${SVT_VERSION} https://gitlab.com/AOMediaCodec/SVT-AV1/ /tmp/svt-av1 && \
     cd /tmp/svt-av1 && \
-    git checkout ${SVT_VERSION} && \
     cd Build/linux && \
     ./build.sh release --enable-lto --enable-pgo -xi --disable-native --disable-avx512 && \
     mkdir -p /usr/local/bin && \
@@ -94,15 +95,17 @@ RUN git clone https://gitlab.com/AOMediaCodec/SVT-AV1/ /tmp/svt-av1 && \
 FROM base AS av-scenechange
 # renovate: datasource=github-releases depName=rust-av/av-scenechange versioning=semver-coerced
 ARG AV_SCENECHANGE_VERSION=v0.24.1
-RUN apt-get update && apt-get install -y libffms2-dev && \
-    rm -rf /var/lib/apt/lists/*
-RUN git clone https://github.com/rust-av/av-scenechange.git /tmp/av-scenechange && \
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
+    apt-get update && apt-get install -y libffms2-dev
+RUN --mount=type=cache,target=/root/.cargo/registry,sharing=locked \
+    --mount=type=cache,target=/root/.cargo/git,sharing=locked \
+    git clone --depth 1 --branch ${AV_SCENECHANGE_VERSION} https://github.com/rust-av/av-scenechange.git /tmp/av-scenechange && \
     cd /tmp/av-scenechange && \
-    git checkout ${AV_SCENECHANGE_VERSION} && \
     cargo build --release --features ffms2 && \
     cp target/release/av-scenechange /usr/local/bin/ && \
     chmod +x /usr/local/bin/av-scenechange && \
-    rm -rf /tmp/av-scenechange /root/.cargo/registry /root/.cargo/git
+    rm -rf /tmp/av-scenechange
 
 # ============================================================================
 # DEPENDENT COMPONENTS - Build after their dependencies
@@ -113,12 +116,12 @@ FROM zimg AS vapoursynth
 # renovate: datasource=github-tags depName=vapoursynth/vapoursynth versioning=regex:^R(?<major>\d+)$
 ARG VAPOURSYNTH_VERSION=R71
 # Install Python packages needed for VapourSynth
-RUN apt-get update && apt-get install -y python3-dev python3-setuptools python3-pip && \
-    pip install -U cython --break-system-packages && \
-    rm -rf /var/lib/apt/lists/*
-RUN git clone https://github.com/vapoursynth/vapoursynth.git /tmp/vapoursynth && \
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
+    apt-get update && apt-get install -y python3-dev python3-setuptools python3-pip && \
+    pip install -U cython --break-system-packages
+RUN git clone --depth 1 --branch ${VAPOURSYNTH_VERSION} https://github.com/vapoursynth/vapoursynth.git /tmp/vapoursynth && \
     cd /tmp/vapoursynth && \
-    git checkout ${VAPOURSYNTH_VERSION} && \
     ./autogen.sh && \
     PKG_CONFIG_PATH="/usr/local/lib/pkgconfig" ./configure --enable-shared && \
     make -j$(nproc) && \
@@ -134,9 +137,8 @@ RUN git clone https://github.com/vapoursynth/vapoursynth.git /tmp/vapoursynth &&
 FROM vapoursynth AS bestsource
 # renovate: datasource=github-tags depName=vapoursynth/bestsource versioning=regex:^R(?<major>\d+)$
 ARG BESTSOURCE_VERSION=R8
-RUN git clone https://github.com/vapoursynth/bestsource.git /tmp/bestsource --no-recurse-submodules && \
+RUN git clone --depth 1 --branch ${BESTSOURCE_VERSION} https://github.com/vapoursynth/bestsource.git /tmp/bestsource --no-recurse-submodules && \
     cd /tmp/bestsource && \
-    git checkout ${BESTSOURCE_VERSION} && \
     git config --file .gitmodules submodule.libp2p.url https://github.com/sekrit-twc/libp2p.git && \
     git submodule update --init --recursive --depth 1 && \
     meson setup build || (cat build/meson-logs/meson-log.txt && exit 1) && \
@@ -148,9 +150,8 @@ RUN git clone https://github.com/vapoursynth/bestsource.git /tmp/bestsource --no
 FROM vapoursynth AS vship
 # renovate: datasource=forgejo-releases depName=Line-fr/Vship registryUrl=https://codeberg.org versioning=semver-coerced
 ARG VSHIP_VERSION=v5.1.0
-RUN git clone https://codeberg.org/Line-fr/Vship.git /tmp/Vship && \
+RUN git clone --depth 1 --branch ${VSHIP_VERSION} https://codeberg.org/Line-fr/Vship.git /tmp/Vship && \
     cd /tmp/Vship && \
-    git checkout ${VSHIP_VERSION} && \
     make build BACKEND=Vulkan && \
     make install PREFIX=/usr && \
     mkdir -p /usr/local/lib/vapoursynth && \
@@ -161,17 +162,19 @@ RUN git clone https://codeberg.org/Line-fr/Vship.git /tmp/Vship && \
 FROM vapoursynth AS av1an
 # renovate: datasource=github-tags depName=master-of-zen/Av1an versioning=semver-coerced
 ARG AV1AN_VERSION=v0.5.2
-RUN apt-get update && apt-get install -y libffms2-dev && \
-    rm -rf /var/lib/apt/lists/*
-RUN git clone https://github.com/master-of-zen/Av1an.git /tmp/Av1an && \
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
+    apt-get update && apt-get install -y libffms2-dev
+RUN --mount=type=cache,target=/root/.cargo/registry,sharing=locked \
+    --mount=type=cache,target=/root/.cargo/git,sharing=locked \
+    git clone --depth 1 --branch ${AV1AN_VERSION} https://github.com/master-of-zen/Av1an.git /tmp/Av1an && \
     cd /tmp/Av1an && \
-    git checkout ${AV1AN_VERSION} && \
     export LD_LIBRARY_PATH="/usr/local/lib:${LD_LIBRARY_PATH}" && \
     export PKG_CONFIG_PATH="/usr/local/lib/pkgconfig:${PKG_CONFIG_PATH}" && \
     cargo build --release && \
     cp target/release/av1an /usr/local/bin/ && \
     chmod +x /usr/local/bin/av1an && \
-    rm -rf /tmp/Av1an /root/.cargo/registry /root/.cargo/git
+    rm -rf /tmp/Av1an
 
 # ============================================================================
 # FINAL RUNTIME STAGE
@@ -181,12 +184,14 @@ FROM docker.io/ubuntu:24.04@sha256:4fbb8e6a8395de5a7550b33509421a2bafbc0aab6c06b
 ARG DEBIAN_FRONTEND=noninteractive
 
 # Install runtime packages
-RUN apt-get update && \
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
+    apt-get update && \
     apt-get install -y --no-install-recommends \
     wget curl gnupg ca-certificates python3 libpython3.12 libffms2-5 libgomp1 rar unrar imagemagick mkvtoolnix libegl1 libvulkan1 libvulkan-dev mesa-vulkan-drivers && \
     mkdir -p /usr/local/lib/vapoursynth && \
     ln -s /usr/lib/x86_64-linux-gnu/libffms2.so.5 /usr/local/lib/vapoursynth/libffms2.so && \
-    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+    rm -rf /tmp/* /var/tmp/*
 
 # Copy .NET from official image
 COPY --from=mcr.microsoft.com/dotnet/sdk:10.0@sha256:72dd743782f2ae7e5476fd64f6a460045e3998dc862218b80e6944cba79a01b0 /usr/share/dotnet /dotnet
@@ -194,13 +199,14 @@ COPY --from=mcr.microsoft.com/dotnet/sdk:10.0@sha256:72dd743782f2ae7e5476fd64f6a
 RUN ln -s /dotnet/dotnet /usr/bin/dotnet
 
 # Install Jellyfin FFmpeg (System Default)
-RUN curl -fsSL https://repo.jellyfin.org/debian/jellyfin_team.gpg.key | gpg --dearmor --batch --yes -o /etc/apt/trusted.gpg.d/debian-jellyfin.gpg && \
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
+    curl -fsSL https://repo.jellyfin.org/debian/jellyfin_team.gpg.key | gpg --dearmor --batch --yes -o /etc/apt/trusted.gpg.d/debian-jellyfin.gpg && \
     echo "deb [arch=$(dpkg --print-architecture)] https://repo.jellyfin.org/ubuntu $(awk -F'=' '/^VERSION_CODENAME=/{ print $NF }' /etc/os-release) main" | tee /etc/apt/sources.list.d/jellyfin.list && \
     apt-get update && \
     apt-get install -y jellyfin-ffmpeg8 && \
     ln -s /usr/lib/jellyfin-ffmpeg/ffmpeg /usr/local/bin/ffmpeg && \
-    ln -s /usr/lib/jellyfin-ffmpeg/ffprobe /usr/local/bin/ffprobe && \
-    rm -rf /var/lib/apt/lists/*
+    ln -s /usr/lib/jellyfin-ffmpeg/ffprobe /usr/local/bin/ffprobe
 
 COPY --from=ffmpeg-static /opt/ffmpeg-static /opt/ffmpeg-static
 COPY --from=ab-av1 /usr/local/bin/ab-av1 /usr/local/bin/ab-av1 
