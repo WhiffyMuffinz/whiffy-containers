@@ -136,7 +136,7 @@ RUN git clone --depth 1 --branch ${VAPOURSYNTH_VERSION} https://github.com/vapou
 # --- Stage: BestSource (depends on vapoursynth) ---
 FROM vapoursynth AS bestsource
 # renovate: datasource=github-tags depName=vapoursynth/bestsource versioning=regex:^R(?<major>\d+)$
-ARG BESTSOURCE_VERSION=R8
+ARG BESTSOURCE_VERSION=R20
 RUN git clone --depth 1 --branch ${BESTSOURCE_VERSION} https://github.com/vapoursynth/bestsource.git /tmp/bestsource --no-recurse-submodules && \
     cd /tmp/bestsource && \
     git config --file .gitmodules submodule.libp2p.url https://github.com/sekrit-twc/libp2p.git && \
