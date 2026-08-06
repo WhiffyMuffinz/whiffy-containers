@@ -13,7 +13,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
     apt-get update && \
     apt-get install -y sudo tzdata wget ca-certificates gnupg curl tar xz-utils zstd libssl-dev apt-transport-https openssl locales libfontconfig1 libfreetype6 pciutils vainfo git cmake llvm \
-    build-essential autoconf automake libtool pkg-config nasm meson ninja-build python3-dev python3-venv python3-setuptools libvulkan1 libvulkan-dev mesa-vulkan-drivers libavformat-dev libavfilter-dev libavdevice-dev libavcodec-dev libswscale-dev libxxhash-dev clang
+    build-essential autoconf automake libtool pkg-config nasm meson ninja-build python3-dev python3-venv python3-setuptools python3-pip libvulkan1 libvulkan-dev mesa-vulkan-drivers libavformat-dev libavfilter-dev libavdevice-dev libavcodec-dev libswscale-dev libxxhash-dev clang libffms2-dev
 
 ENV PKG_CONFIG_PATH="/usr/local/lib/pkgconfig"
 ENV CFLAGS="-O3 -march=x86-64-v3"
@@ -95,9 +95,6 @@ RUN git clone --depth 1 --branch ${SVT_VERSION} https://gitlab.com/AOMediaCodec/
 FROM base AS av-scenechange
 # renovate: datasource=github-releases depName=rust-av/av-scenechange versioning=semver-coerced
 ARG AV_SCENECHANGE_VERSION=v0.24.1
-RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
-    --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
-    apt-get update && apt-get install -y libffms2-dev
 RUN --mount=type=cache,target=/root/.cargo/registry,sharing=locked \
     --mount=type=cache,target=/root/.cargo/git,sharing=locked \
     git clone --depth 1 --branch ${AV_SCENECHANGE_VERSION} https://github.com/rust-av/av-scenechange.git /tmp/av-scenechange && \
@@ -116,10 +113,7 @@ FROM zimg AS vapoursynth
 # renovate: datasource=github-tags depName=vapoursynth/vapoursynth versioning=regex:^R(?<major>\d+)$
 ARG VAPOURSYNTH_VERSION=R71
 # Install Python packages needed for VapourSynth
-RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
-    --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
-    apt-get update && apt-get install -y python3-dev python3-setuptools python3-pip && \
-    pip install -U cython --break-system-packages
+RUN pip install -U cython --break-system-packages
 RUN git clone --depth 1 --branch ${VAPOURSYNTH_VERSION} https://github.com/vapoursynth/vapoursynth.git /tmp/vapoursynth && \
     cd /tmp/vapoursynth && \
     ./autogen.sh && \
@@ -162,9 +156,6 @@ RUN git clone --depth 1 --branch ${VSHIP_VERSION} https://codeberg.org/Line-fr/V
 FROM vapoursynth AS av1an
 # renovate: datasource=github-tags depName=master-of-zen/Av1an versioning=semver-coerced
 ARG AV1AN_VERSION=v0.5.2
-RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
-    --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
-    apt-get update && apt-get install -y libffms2-dev
 RUN --mount=type=cache,target=/root/.cargo/registry,sharing=locked \
     --mount=type=cache,target=/root/.cargo/git,sharing=locked \
     git clone --depth 1 --branch ${AV1AN_VERSION} https://github.com/master-of-zen/Av1an.git /tmp/Av1an && \
