@@ -111,7 +111,7 @@ RUN --mount=type=cache,target=/root/.cargo/registry,sharing=locked \
 # --- Stage: VapourSynth (depends on zimg) ---
 FROM zimg AS vapoursynth
 # renovate: datasource=github-tags depName=vapoursynth/vapoursynth versioning=regex:^R(?<major>\d+)$
-ARG VAPOURSYNTH_VERSION=R71
+ARG VAPOURSYNTH_VERSION=R79
 # Install Python packages needed for VapourSynth
 RUN pip install -U cython --break-system-packages
 RUN git clone --depth 1 --branch ${VAPOURSYNTH_VERSION} https://github.com/vapoursynth/vapoursynth.git /tmp/vapoursynth && \
