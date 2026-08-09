@@ -16,6 +16,7 @@ jobs:
     with:
       container: "mineru"
       push: false
+      pr_number: ${{ github.event.pull_request.number }}
     secrets: inherit
 
   status:

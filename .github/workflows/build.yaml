@@ -12,6 +12,11 @@ on:
         required: false
         default: false
         type: boolean
+      pr_number:
+        description: "Pull request number to post the Grype scan comment to"
+        required: false
+        default: ""
+        type: string
     outputs:
       image_tag:
         description: "Semver tag that was built (e.g. 26.03.12)"
@@ -99,7 +104,7 @@ jobs:
             < ./${{ inputs.container }}/test.sh
 
       - name: Scan image with Grype
-        if: ${{ github.event_name == 'pull_request' }}
+        if: ${{ inputs.pr_number != '' }}
         id: scan
         uses: anchore/scan-action@e1165082ffb1fe366ebaf02d8526e7c4989ea9d2 # v7
         with:
@@ -108,11 +113,12 @@ jobs:
           fail-build: false
 
       - name: Comment Grype summary on PR
-        if: ${{ github.event_name == 'pull_request' }}
+        if: ${{ inputs.pr_number != '' }}
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         env:
           JSON_PATH: ${{ steps.scan.outputs.json }}
           CONTAINER_NAME: ${{ inputs.container }}
+          PR_NUMBER: ${{ inputs.pr_number }}
         with:
           script: |
             const fs = require('fs');
@@ -173,11 +179,12 @@ jobs:
             const marker = '<!-- grype-scan-summary -->';
             const body = marker + '\n' + lines.join('\n');
             const { owner, repo } = context.repo;
+            const prNumber = Number(process.env.PR_NUMBER);
 
             const { data: comments } = await github.rest.issues.listComments({
               owner,
               repo,
-              issue_number: github.event.pull_request.number,
+              issue_number: prNumber,
               per_page: 100,
             });
 
@@ -194,7 +201,7 @@ jobs:
               await github.rest.issues.createComment({
                 owner,
                 repo,
-                issue_number: github.event.pull_request.number,
+                issue_number: prNumber,
                 body,
               });
               console.log('Created new comment');
