@@ -156,6 +156,19 @@ jobs:
               if (counts[sev]) lines.push(`| ${sev} | ${counts[sev]} |`);
             }
 
+            function fixedIn(vuln) {
+              const fix = vuln.fix || {};
+              const versions = (fix.versions || []).filter(Boolean);
+              if (versions.length) return versions.join(', ');
+              switch (fix.state) {
+                case 'fixed': return 'Fixed';
+                case 'not-fixed': return 'Not fixed';
+                case 'wont-fix': return "Won't fix";
+                case 'unknown': return 'Unknown';
+                default: return fix.state || '-';
+              }
+            }
+
             if (total > 0) {
               lines.push('');
               lines.push('<details>');
@@ -167,10 +180,7 @@ jobs:
               for (const match of top) {
                 const vuln = match.vulnerability || {};
                 const artifact = match.artifact || {};
-                const fixed = (vuln.fix && vuln.fix.versions && vuln.fix.versions.length)
-                  ? vuln.fix.versions.join(', ')
-                  : '-';
-                lines.push(`| ${vuln.severity || 'Unknown'} | ${vuln.id || '-'} | ${artifact.name || '-'} | ${artifact.version || '-'} | ${fixed} |`);
+                lines.push(`| ${vuln.severity || 'Unknown'} | ${vuln.id || '-'} | ${artifact.name || '-'} | ${artifact.version || '-'} | ${fixedIn(vuln)} |`);
               }
               if (total > top.length) lines.push(`| ... | | | | _${total - top.length} more_ |`);
               lines.push('</details>');
