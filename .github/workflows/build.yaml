@@ -12,6 +12,11 @@ on:
         required: false
         default: false
         type: boolean
+      pr_number:
+        description: "Pull request number to post the Grype scan comment to"
+        required: false
+        default: ""
+        type: string
     outputs:
       image_tag:
         description: "Semver tag that was built (e.g. 26.03.12)"
@@ -97,6 +102,120 @@ jobs:
             --entrypoint bash \
             whiffy-test:${{ inputs.container }} \
             < ./${{ inputs.container }}/test.sh
+
+      - name: Scan image with Grype
+        if: ${{ inputs.pr_number != '' }}
+        id: scan
+        uses: anchore/scan-action@e1165082ffb1fe366ebaf02d8526e7c4989ea9d2 # v7
+        with:
+          image: "whiffy-test:${{ inputs.container }}"
+          output-format: json
+          fail-build: false
+
+      - name: Comment Grype summary on PR
+        if: ${{ inputs.pr_number != '' }}
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        env:
+          JSON_PATH: ${{ steps.scan.outputs.json }}
+          CONTAINER_NAME: ${{ inputs.container }}
+          PR_NUMBER: ${{ inputs.pr_number }}
+        with:
+          script: |
+            const fs = require('fs');
+            const report = JSON.parse(fs.readFileSync(process.env.JSON_PATH, 'utf8'));
+            const matches = report.matches || [];
+
+            const severityOrder = ['Critical', 'High', 'Medium', 'Low', 'Negligible', 'Unknown'];
+            const counts = {};
+            const bySev = {};
+            for (const match of matches) {
+              const sev = (match.vulnerability && match.vulnerability.severity) || 'Unknown';
+              counts[sev] = (counts[sev] || 0) + 1;
+              if (!bySev[sev]) bySev[sev] = [];
+              bySev[sev].push(match);
+            }
+
+            const sorted = [];
+            for (const sev of severityOrder) {
+              if (bySev[sev]) {
+                bySev[sev].sort((a, b) =>
+                  ((a.vulnerability && a.vulnerability.id) || '').localeCompare((b.vulnerability && b.vulnerability.id) || ''));
+                for (const match of bySev[sev]) sorted.push(match);
+              }
+            }
+
+            const total = matches.length;
+            const lines = [];
+            lines.push(`## Grype Security Scan - ${process.env.CONTAINER_NAME}`);
+            lines.push('');
+            lines.push(total === 0 ? 'No known vulnerabilities detected.' : `**${total} vulnerabilities found:**`);
+            lines.push('');
+            lines.push('| Severity | Count |');
+            lines.push('| --- | --- |');
+            for (const sev of severityOrder) {
+              if (counts[sev]) lines.push(`| ${sev} | ${counts[sev]} |`);
+            }
+
+            function fixedIn(vuln) {
+              const fix = vuln.fix || {};
+              const versions = (fix.versions || []).filter(Boolean);
+              if (versions.length) return versions.join(', ');
+              switch (fix.state) {
+                case 'fixed': return 'Fixed';
+                case 'not-fixed': return 'Not fixed';
+                case 'wont-fix': return "Won't fix";
+                case 'unknown': return 'Unknown';
+                default: return fix.state || '-';
+              }
+            }
+
+            if (total > 0) {
+              lines.push('');
+              lines.push('<details>');
+              lines.push('<summary>View vulnerabilities</summary>');
+              lines.push('');
+              lines.push('| Severity | ID | Package | Version | Fixed in |');
+              lines.push('| --- | --- | --- | --- | --- |');
+              const top = sorted.slice(0, 20);
+              for (const match of top) {
+                const vuln = match.vulnerability || {};
+                const artifact = match.artifact || {};
+                lines.push(`| ${vuln.severity || 'Unknown'} | ${vuln.id || '-'} | ${artifact.name || '-'} | ${artifact.version || '-'} | ${fixedIn(vuln)} |`);
+              }
+              if (total > top.length) lines.push(`| ... | | | | _${total - top.length} more_ |`);
+              lines.push('</details>');
+            }
+
+            const marker = '<!-- grype-scan-summary:' + process.env.CONTAINER_NAME + ' -->';
+            const body = marker + '\n' + lines.join('\n');
+            const { owner, repo } = context.repo;
+            const prNumber = Number(process.env.PR_NUMBER);
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner,
+              repo,
+              issue_number: prNumber,
+              per_page: 100,
+            });
+
+            const existing = comments.find((comment) => comment.body && comment.body.includes(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner,
+                repo,
+                comment_id: existing.id,
+                body,
+              });
+              console.log(`Updated comment ${existing.id}`);
+            } else {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: prNumber,
+                body,
+              });
+              console.log('Created new comment');
+            }
 
       - name: Commit version update
         if: ${{ steps.vars.outputs.will_commit == 'true' }}

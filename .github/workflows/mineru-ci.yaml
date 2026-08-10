@@ -2,6 +2,7 @@ name: CI — Mineru
 
 permissions:
   contents: write
+  pull-requests: write
 
 on:
   pull_request:
@@ -15,6 +16,7 @@ jobs:
     with:
       container: "mineru"
       push: false
+      pr_number: ${{ github.event.pull_request.number }}
     secrets: inherit
 
   status:
