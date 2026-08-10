@@ -186,7 +186,7 @@ jobs:
               lines.push('</details>');
             }
 
-            const marker = '<!-- grype-scan-summary -->';
+            const marker = '<!-- grype-scan-summary:' + process.env.CONTAINER_NAME + ' -->';
             const body = marker + '\n' + lines.join('\n');
             const { owner, repo } = context.repo;
             const prNumber = Number(process.env.PR_NUMBER);
