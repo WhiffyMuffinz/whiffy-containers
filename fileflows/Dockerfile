@@ -184,7 +184,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     rm -rf /tmp/* /var/tmp/*
 
 # Copy .NET from official image
-COPY --from=mcr.microsoft.com/dotnet/sdk:10.0@sha256:72dd743782f2ae7e5476fd64f6a460045e3998dc862218b80e6944cba79a01b0 /usr/share/dotnet /dotnet
+COPY --from=mcr.microsoft.com/dotnet/sdk:10.0@sha256:e1fc6e423f543119c406d24e2e687d67c569f18f04a37a8b0005d80ad0dcee80 /usr/share/dotnet /dotnet
 
 RUN ln -s /dotnet/dotnet /usr/bin/dotnet
 
