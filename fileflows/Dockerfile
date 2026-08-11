@@ -4,7 +4,7 @@
 # SHARED BASE STAGE - Common build dependencies
 # ============================================================================
 FROM rust:1.97@sha256:3382bd20aa942806c533e9a73cd000474fb3ef173f71e684cc9b942675781769 AS rust
-FROM docker.io/ubuntu:24.04@sha256:561618e2c15bf2397621dd04f96926663a3b5616c189cf7e38db7e82f5c538ea AS base
+FROM docker.io/ubuntu:26.04@sha256:678c6550cc43645e08669028bc177f50be4e7c5b8cca677067b1914d4afc7a03 AS base
 
 ARG DEBIAN_FRONTEND=noninteractive
 
@@ -111,26 +111,24 @@ RUN --mount=type=cache,target=/root/.cargo/registry,sharing=locked \
 # --- Stage: VapourSynth (depends on zimg) ---
 FROM zimg AS vapoursynth
 # renovate: datasource=github-tags depName=vapoursynth/vapoursynth versioning=regex:^R(?<major>\d+)$
-ARG VAPOURSYNTH_VERSION=R71
+ARG VAPOURSYNTH_VERSION=R79
 # Install Python packages needed for VapourSynth
 RUN pip install -U cython --break-system-packages
 RUN git clone --depth 1 --branch ${VAPOURSYNTH_VERSION} https://github.com/vapoursynth/vapoursynth.git /tmp/vapoursynth && \
     cd /tmp/vapoursynth && \
-    ./autogen.sh && \
-    PKG_CONFIG_PATH="/usr/local/lib/pkgconfig" ./configure --enable-shared && \
-    make -j$(nproc) && \
-    make install && \
+    PKG_CONFIG_PATH="/usr/local/lib/pkgconfig" pip install . --break-system-packages && \
     ldconfig && \
-    cd /tmp/vapoursynth && \
-    pip install . --break-system-packages && \
+    ln -sf /usr/local/lib/python3.14/dist-packages/vapoursynth/libvapoursynth.so.4 /usr/local/lib/libvapoursynth.so.4 && \
+    ln -sf /usr/local/lib/python3.14/dist-packages/vapoursynth/libvapoursynth.so.4 /usr/local/lib/libvapoursynth.so && \
+    ln -sf /usr/local/lib/python3.14/dist-packages/vapoursynth/libvsscript.so /usr/local/lib/libvsscript.so && \
+    ln -sf /usr/local/lib/python3.14/dist-packages/vapoursynth/libvsscript.so /usr/local/lib/libvapoursynth-script.so && \
     ldconfig && \
-    if [ ! -f /usr/lib/libvapoursynth.so ] && [ -f /usr/local/lib/libvapoursynth.so ]; then ln -sf /usr/local/lib/libvapoursynth* /usr/lib/; fi && \
     rm -rf /tmp/vapoursynth
 
 # --- Stage: BestSource (depends on vapoursynth) ---
 FROM vapoursynth AS bestsource
 # renovate: datasource=github-tags depName=vapoursynth/bestsource versioning=regex:^R(?<major>\d+)$
-ARG BESTSOURCE_VERSION=R8
+ARG BESTSOURCE_VERSION=R20
 RUN git clone --depth 1 --branch ${BESTSOURCE_VERSION} https://github.com/vapoursynth/bestsource.git /tmp/bestsource --no-recurse-submodules && \
     cd /tmp/bestsource && \
     git config --file .gitmodules submodule.libp2p.url https://github.com/sekrit-twc/libp2p.git && \
@@ -162,6 +160,7 @@ RUN --mount=type=cache,target=/root/.cargo/registry,sharing=locked \
     cd /tmp/Av1an && \
     export LD_LIBRARY_PATH="/usr/local/lib:${LD_LIBRARY_PATH}" && \
     export PKG_CONFIG_PATH="/usr/local/lib/pkgconfig:${PKG_CONFIG_PATH}" && \
+    export VAPOURSYNTH_LIB_DIR="/usr/local/lib" && \
     cargo build --release && \
     cp target/release/av1an /usr/local/bin/ && \
     chmod +x /usr/local/bin/av1an && \
@@ -170,7 +169,7 @@ RUN --mount=type=cache,target=/root/.cargo/registry,sharing=locked \
 # ============================================================================
 # FINAL RUNTIME STAGE
 # ============================================================================
-FROM docker.io/ubuntu:24.04@sha256:561618e2c15bf2397621dd04f96926663a3b5616c189cf7e38db7e82f5c538ea  AS final
+FROM docker.io/ubuntu:26.04@sha256:678c6550cc43645e08669028bc177f50be4e7c5b8cca677067b1914d4afc7a03  AS final
 
 ARG DEBIAN_FRONTEND=noninteractive
 
@@ -179,7 +178,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
     apt-get update && \
     apt-get install -y --no-install-recommends \
-    wget curl gnupg ca-certificates python3 libpython3.12 libffms2-5 libgomp1 rar unrar imagemagick mkvtoolnix libegl1 libvulkan1 libvulkan-dev mesa-vulkan-drivers && \
+    wget curl gnupg ca-certificates python3 libpython3.14 libffms2-5 libgomp1 rar unrar imagemagick mkvtoolnix libegl1 libvulkan1 libvulkan-dev mesa-vulkan-drivers && \
     mkdir -p /usr/local/lib/vapoursynth && \
     ln -s /usr/lib/x86_64-linux-gnu/libffms2.so.5 /usr/local/lib/vapoursynth/libffms2.so && \
     rm -rf /tmp/* /var/tmp/*
@@ -214,17 +213,40 @@ COPY --from=svt-av1 /usr/local/bin/SvtAv1EncApp /usr/local/bin/SvtAv1EncApp
 COPY --from=av1an /usr/local/bin/av1an /usr/local/bin/av1an
 COPY --from=av-scenechange /usr/local/bin/av-scenechange /usr/local/bin/av-scenechange
 COPY --from=vapoursynth /usr/local/bin/vspipe /usr/local/bin/vspipe
+COPY --from=vapoursynth /usr/local/bin/vapoursynth /usr/local/bin/vapoursynth
 
 # Copy compiled libraries from vapoursynth stage (includes zimg, vapoursynth, bestsource)
 COPY --from=vapoursynth /usr/local/lib /usr/local/lib
-COPY --from=bestsource /usr/local/lib/vapoursynth /usr/local/lib/vapoursynth
-COPY --from=bestsource /usr/local/lib/x86_64-linux-gnu/libbestsource.so /usr/local/lib/
+COPY --from=bestsource /usr/local/lib/python3/dist-packages/vapoursynth/plugins/libbestsource.so /usr/local/lib/vapoursynth/bestsource.so
 
 # Copy Vship VapourSynth plugins
 COPY --from=vship /usr/local/lib/vapoursynth/ /usr/local/lib/vapoursynth/
 
 # Copy Python packages (VapourSynth bindings)
-COPY --from=vapoursynth /usr/local/lib/python3.12/dist-packages /usr/local/lib/python3.12/dist-packages
+COPY --from=vapoursynth /usr/local/lib/python3.14/dist-packages /usr/local/lib/python3.14/dist-packages
+
+# Configure VapourSynth runtime (maps all libvsscript load paths to this Python installation)
+RUN python3 - <<'EOF'
+import os
+import sys
+from vapoursynth._utils import _find_python_symbol_path, _mangle_vsscript_key, _get_vapoursynth_config_path, _escape_toml_string
+
+py = sys.executable
+pylib = _find_python_symbol_path()
+mtime = int(os.stat(py).st_mtime)
+
+cfg = {}
+for vss in ["/usr/local/lib/python3.14/dist-packages/vapoursynth/libvsscript.so",
+            "/usr/local/lib/libvsscript.so",
+            "/usr/local/lib/libvapoursynth-script.so"]:
+    cfg[_mangle_vsscript_key(vss)] = [py, pylib, mtime]
+
+cfg_path = _get_vapoursynth_config_path()
+cfg_path.parent.mkdir(parents=True, exist_ok=True)
+with open(cfg_path, "w") as f:
+    for key in cfg:
+        f.write(f"{_escape_toml_string(key)} = [{_escape_toml_string(cfg[key][0])},{_escape_toml_string(cfg[key][1])},{cfg[key][2]}]\n")
+EOF
 
 # Update library cache
 RUN ldconfig
@@ -234,6 +256,8 @@ ENV NVIDIA_DRIVER_CAPABILITIES=compute,video,utility
 ENV NVIDIA_VISIBLE_DEVICES=all
 ENV DOTNET_ROOT=/dotnet
 ENV DOTNET_CLI_TELEMETRY_OPTOUT=true
+# Extra VapourSynth plugin search path (ffms2, bestsource, vship)
+ENV VAPOURSYNTH_EXTRA_PLUGIN_PATH=/usr/local/lib/vapoursynth
 # Add BtbN FFmpeg to PATH (after /usr/local/bin so Jellyfin version is default)
 ENV PATH=/dotnet:/dotnet/tools:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/opt/ffmpeg-static/bin
 
