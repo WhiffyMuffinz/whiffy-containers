@@ -183,8 +183,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     ln -s /usr/lib/x86_64-linux-gnu/libffms2.so.5 /usr/local/lib/vapoursynth/libffms2.so && \
     rm -rf /tmp/* /var/tmp/*
 
-# Copy .NET from official image
-COPY --from=mcr.microsoft.com/dotnet/sdk:10.0@sha256:e1fc6e423f543119c406d24e2e687d67c569f18f04a37a8b0005d80ad0dcee80 /usr/share/dotnet /dotnet
+COPY --from=mcr.microsoft.com/dotnet/aspnet:10.0 /usr/share/dotnet /dotnet
 
 RUN ln -s /dotnet/dotnet /usr/bin/dotnet
 
