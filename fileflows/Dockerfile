@@ -86,7 +86,7 @@ ARG SVT_VERSION=v4.2.0
 RUN git clone --depth 1 --branch ${SVT_VERSION} https://gitlab.com/AOMediaCodec/SVT-AV1/ /tmp/svt-av1 && \
     cd /tmp/svt-av1 && \
     cd Build/linux && \
-    ./build.sh release --enable-lto --enable-pgo -xi --disable-native --disable-avx512 && \
+    ./build.sh release --enable-lto --enable-pgo -xi --disable-native && \
     mkdir -p /usr/local/bin && \
     if [ -f /tmp/svt-av1/Bin/Release/SvtAv1EncApp ]; then cp /tmp/svt-av1/Bin/Release/SvtAv1EncApp /usr/local/bin/; fi && \
     rm -rf /tmp/svt-av1
