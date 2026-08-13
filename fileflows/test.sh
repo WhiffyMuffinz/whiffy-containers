@@ -184,7 +184,7 @@ fi
 # ============================================================================
 echo -e "\n${BOLD}[Runtime]${RESET}"
 
-dotnet_ver=$(/dotnet/dotnet --version 2>/dev/null || echo "unknown")
+dotnet_ver=$(/dotnet/dotnet --info 2>/dev/null | grep "Version:" | head -1 | awk '{print $2}' || echo "unknown")
 if [[ "$dotnet_ver" == 10.* ]]; then
   pass ".NET version $dotnet_ver"
 else
