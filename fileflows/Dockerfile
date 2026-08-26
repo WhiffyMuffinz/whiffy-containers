@@ -141,7 +141,7 @@ RUN git clone --depth 1 --branch ${BESTSOURCE_VERSION} https://github.com/vapour
 # --- Stage: Vship GPU SSIM2 (depends on vapoursynth + CUDA) ---
 FROM vapoursynth AS vship
 # renovate: datasource=forgejo-releases depName=Line-fr/Vship registryUrl=https://codeberg.org versioning=semver-coerced
-ARG VSHIP_VERSION=v5.1.0
+ARG VSHIP_VERSION=v5.1.1
 RUN git clone --depth 1 --branch ${VSHIP_VERSION} https://codeberg.org/Line-fr/Vship.git /tmp/Vship && \
     cd /tmp/Vship && \
     make build BACKEND=Vulkan && \
