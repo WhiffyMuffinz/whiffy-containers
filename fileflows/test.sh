@@ -171,7 +171,7 @@ fi
 
 # av1an encode
 av1an -i "$WORKDIR/test.mp4" -e svt-av1 -o "$WORKDIR/out_av1an.mkv" \
-  --force --keep --temp "$WORKDIR/av1an-temp" 2>/dev/null
+  --force --keep -w 1 --temp "$WORKDIR/av1an-temp" 2>/dev/null
 check_functional "av1an encode" "$WORKDIR/out_av1an.mkv"
 
 # av-scenechange detection
