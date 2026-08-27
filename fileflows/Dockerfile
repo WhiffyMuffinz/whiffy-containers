@@ -28,12 +28,13 @@ COPY --from=rust /usr/local/rustup /usr/local/rustup
 RUN /usr/local/cargo/bin/rustup default stable
 ENV PATH="/usr/local/cargo/bin:${PATH}"
 
-# Install wild linker for Rust
+# Install wild linker and sccache for Rust
 RUN --mount=type=cache,target=/root/.cargo/registry,sharing=locked \
     --mount=type=cache,target=/root/.cargo/git,sharing=locked \
-    cargo install --locked wild-linker && \
+    --mount=type=cache,target=/root/.cache/sccache,sharing=locked \
+    cargo install --locked wild-linker sccache && \
     mkdir -p /root/.cargo && \
-    printf '[target.x86_64-unknown-linux-gnu]\nlinker = "clang"\nrustflags = ["-Clink-arg=--ld-path=wild", "-Ctarget-cpu=x86-64-v3"]\n' > /root/.cargo/config.toml
+    printf '[build]\nrustc-wrapper = "/root/.cargo/bin/sccache"\n\n[target.x86_64-unknown-linux-gnu]\nlinker = "clang"\nrustflags = ["-Clink-arg=--ld-path=wild", "-Ctarget-cpu=x86-64-v3"]\n' > /root/.cargo/config.toml
 
 # ============================================================================
 # INDEPENDENT COMPONENTS - Can be built in parallel, no dependencies
@@ -97,6 +98,7 @@ FROM base AS av-scenechange
 ARG AV_SCENECHANGE_VERSION=v0.24.1
 RUN --mount=type=cache,target=/root/.cargo/registry,sharing=locked \
     --mount=type=cache,target=/root/.cargo/git,sharing=locked \
+    --mount=type=cache,target=/root/.cache/sccache,sharing=locked \
     git clone --depth 1 --branch ${AV_SCENECHANGE_VERSION} https://github.com/rust-av/av-scenechange.git /tmp/av-scenechange && \
     cd /tmp/av-scenechange && \
     cargo build --release --features ffms2 && \
@@ -156,6 +158,7 @@ FROM vapoursynth AS av1an
 ARG AV1AN_VERSION=v0.5.2
 RUN --mount=type=cache,target=/root/.cargo/registry,sharing=locked \
     --mount=type=cache,target=/root/.cargo/git,sharing=locked \
+    --mount=type=cache,target=/root/.cache/sccache,sharing=locked \
     git clone --depth 1 --branch ${AV1AN_VERSION} https://github.com/master-of-zen/Av1an.git /tmp/Av1an && \
     cd /tmp/Av1an && \
     export LD_LIBRARY_PATH="/usr/local/lib:${LD_LIBRARY_PATH}" && \
