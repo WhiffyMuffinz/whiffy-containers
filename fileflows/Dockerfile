@@ -53,18 +53,31 @@ RUN mkdir -p /opt/ffmpeg-static && \
 
 # --- Stage: ab-av1 ---
 FROM base AS ab-av1
-# renovate: datasource=github-releases depName=alexheretic/ab-av1 versioning=semver-coerced
+# renovate: datasource=github-tags depName=alexheretic/ab-av1 versioning=semver-coerced
 ARG AB_AV1_VERSION=v0.11.7
-RUN curl -L -o /tmp/ab-av1.tar.zst "https://github.com/alexheretic/ab-av1/releases/download/${AB_AV1_VERSION}/ab-av1-${AB_AV1_VERSION}-x86_64-unknown-linux-musl.tar.zst" && \
-    tar --use-compress-program=unzstd -xvf /tmp/ab-av1.tar.zst -C /usr/local/bin ab-av1 && \
-    rm /tmp/ab-av1.tar.zst
+RUN --mount=type=cache,target=/root/.cargo/registry,sharing=locked \
+    --mount=type=cache,target=/root/.cargo/git,sharing=locked \
+    --mount=type=cache,target=/root/.cache/sccache,sharing=locked \
+    git clone --depth 1 --branch ${AB_AV1_VERSION} https://github.com/alexheretic/ab-av1.git /tmp/ab-av1 && \
+    cd /tmp/ab-av1 && \
+    cargo rustc --release -- -C target-feature=+crt-static && \
+    cp target/release/ab-av1 /usr/local/bin/ && \
+    chmod +x /usr/local/bin/ab-av1 && \
+    rm -rf /tmp/ab-av1
 
 # --- Stage: dovi_tool ---
 FROM base AS dovi-tool
-# renovate: datasource=github-releases depName=quietvoid/dovi_tool versioning=semver-coerced
+# renovate: datasource=github-tags depName=quietvoid/dovi_tool versioning=semver-coerced
 ARG DOVI_TOOL_VERSION=2.3.3
-RUN curl -L "https://github.com/quietvoid/dovi_tool/releases/download/${DOVI_TOOL_VERSION}/dovi_tool-${DOVI_TOOL_VERSION}-x86_64-unknown-linux-musl.tar.gz" | \
-    tar -xzvf - -C /usr/local/bin
+RUN --mount=type=cache,target=/root/.cargo/registry,sharing=locked \
+    --mount=type=cache,target=/root/.cargo/git,sharing=locked \
+    --mount=type=cache,target=/root/.cache/sccache,sharing=locked \
+    git clone --depth 1 --branch ${DOVI_TOOL_VERSION} https://github.com/quietvoid/dovi_tool.git /tmp/dovi_tool && \
+    cd /tmp/dovi_tool && \
+    cargo rustc --release --no-default-features --features internal-font -- -C target-feature=+crt-static && \
+    cp target/release/dovi_tool /usr/local/bin/ && \
+    chmod +x /usr/local/bin/dovi_tool && \
+    rm -rf /tmp/dovi_tool
 
 # --- Stage: zimg ---
 FROM base AS zimg
