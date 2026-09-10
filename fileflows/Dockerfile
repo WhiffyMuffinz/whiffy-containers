@@ -68,7 +68,7 @@ RUN --mount=type=cache,target=/root/.cargo/registry,sharing=locked \
 # --- Stage: dovi_tool ---
 FROM base AS dovi-tool
 # renovate: datasource=github-tags depName=quietvoid/dovi_tool versioning=semver-coerced
-ARG DOVI_TOOL_VERSION=2.3.3
+ARG DOVI_TOOL_VERSION=2.3.4
 RUN --mount=type=cache,target=/root/.cargo/registry,sharing=locked \
     --mount=type=cache,target=/root/.cargo/git,sharing=locked \
     --mount=type=cache,target=/root/.cache/sccache,sharing=locked \
