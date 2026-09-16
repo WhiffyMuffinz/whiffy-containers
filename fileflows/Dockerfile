@@ -277,7 +277,7 @@ ENV VAPOURSYNTH_EXTRA_PLUGIN_PATH=/usr/local/lib/vapoursynth
 ENV PATH=/dotnet:/dotnet/tools:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/opt/ffmpeg-static/bin
 
 # Copy application code from the appdata stage
-COPY --from=revenz/fileflows:26.09@sha256:5d7460ec63be60bb33fd50336b064c138e7d005a8fd3d19d47ff259de7df8b82 /app /app
+COPY --from=revenz/fileflows:26.09@sha256:51323683e666f3f613fd0c17aeb26d08860cdf39b9633c9ba869404d9ba50ef2 /app /app
 
 # Make entrypoint script executable
 RUN chmod +x /app/docker-entrypoint.sh
