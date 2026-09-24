@@ -105,6 +105,28 @@ RUN git clone --depth 1 --branch ${SVT_VERSION} https://gitlab.com/AOMediaCodec/
     if [ -f /tmp/svt-av1/Bin/Release/SvtAv1EncApp ]; then cp /tmp/svt-av1/Bin/Release/SvtAv1EncApp /usr/local/bin/; fi && \
     rm -rf /tmp/svt-av1
 
+# --- Stage: whisper.cpp (Vulkan) ---
+FROM base AS whisper-cpp
+# renovate: datasource=github-tags depName=ggml-org/whisper.cpp versioning=semver
+ARG WHISPER_VERSION=v1.9.4
+ARG WHISPER_MODEL_SHA256=42a1ffcbe4167d224232443396968db4d02d4e8e87e213d3ee2e03095dea6502
+ARG WHISPER_MODEL_URL=https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-medium-q8_0.bin
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
+    apt-get update && \
+    apt-get install -y --no-install-recommends spirv-headers glslc && \
+    rm -rf /var/lib/apt/lists/*
+RUN git clone --depth 1 --branch ${WHISPER_VERSION} https://github.com/ggml-org/whisper.cpp /tmp/whisper.cpp && \
+    cd /tmp/whisper.cpp && \
+    cmake -B build -DCMAKE_BUILD_TYPE=Release -DGGML_VULKAN=ON -DWHISPER_BUILD_EXAMPLES=ON -DWHISPER_BUILD_TESTS=OFF -DWHISPER_BUILD_IS_DEV=OFF -DBUILD_SHARED_LIBS=OFF && \
+    cmake --build build --target whisper-cli -j$(nproc) && \
+    install -m 0755 build/bin/whisper-cli /usr/local/bin/whisper-cli && \
+    rm -rf /tmp/whisper.cpp
+RUN mkdir -p /opt/whisper/models && \
+    wget -q --tries=3 --timeout=60 --retry-connrefused \
+        "${WHISPER_MODEL_URL}" -O /opt/whisper/models/ggml-medium-q8_0.bin && \
+    echo "${WHISPER_MODEL_SHA256}  /opt/whisper/models/ggml-medium-q8_0.bin" | sha256sum -c -
+
 # --- Stage: av-scenechange ---
 FROM base AS av-scenechange
 # renovate: datasource=github-releases depName=rust-av/av-scenechange versioning=semver-coerced
@@ -227,6 +249,8 @@ COPY --from=dovi-tool /usr/local/bin/dovi_tool /usr/local/bin/dovi_tool
 COPY --from=svt-av1 /usr/local/bin/SvtAv1EncApp /usr/local/bin/SvtAv1EncApp
 COPY --from=av1an /usr/local/bin/av1an /usr/local/bin/av1an
 COPY --from=av-scenechange /usr/local/bin/av-scenechange /usr/local/bin/av-scenechange
+COPY --from=whisper-cpp /usr/local/bin/whisper-cli /usr/local/bin/whisper-cli
+COPY --from=whisper-cpp /opt/whisper /opt/whisper
 COPY --from=vapoursynth /usr/local/bin/vspipe /usr/local/bin/vspipe
 COPY --from=vapoursynth /usr/local/bin/vapoursynth /usr/local/bin/vapoursynth
 
@@ -275,9 +299,15 @@ ENV DOTNET_CLI_TELEMETRY_OPTOUT=true
 ENV VAPOURSYNTH_EXTRA_PLUGIN_PATH=/usr/local/lib/vapoursynth
 # Add BtbN FFmpeg to PATH (after /usr/local/bin so Jellyfin version is default)
 ENV PATH=/dotnet:/dotnet/tools:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/opt/ffmpeg-static/bin
+# Default whisper.cpp model (language detection)
+ENV WHISPER_MODEL=/opt/whisper/models/ggml-medium-q8_0.bin
 
 # Copy application code from the appdata stage
 COPY --from=revenz/fileflows:26.09@sha256:1f412e4e2b411a18d25538095629ef870185ea602f9840caab06088dec8231ae /app /app
+
+# whisper-cli path is for the script to detect like it's from the dockermod
+RUN mkdir -p /app/common/whisper && \
+    ln -s /usr/local/bin/whisper-cli /app/common/whisper/whisper-cli
 
 # Make entrypoint script executable
 RUN chmod +x /app/docker-entrypoint.sh

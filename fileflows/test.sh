@@ -100,6 +100,8 @@ check_binary "ab-av1" "/usr/local/bin/ab-av1"
 check_binary "SvtAv1EncApp" "/usr/local/bin/SvtAv1EncApp"
 check_binary "av1an" "/usr/local/bin/av1an"
 check_binary "av-scenechange" "/usr/local/bin/av-scenechange"
+check_binary "whisper-cli" "/usr/local/bin/whisper-cli"
+check_binary "whisper-cli (common)" "/app/common/whisper/whisper-cli"
 check_binary "vspipe" "/usr/local/bin/vspipe"
 check_binary "dotnet" "/dotnet/dotnet"
 
@@ -115,12 +117,20 @@ else
   fail "Vship plugins" "no *vship*.so found in /usr/local/lib/vapoursynth/"
 fi
 
+# Whisper model (sha256 pinned in Dockerfile)
+if echo "42a1ffcbe4167d224232443396968db4d02d4e8e87e213d3ee2e03095dea6502  /opt/whisper/models/ggml-medium-q8_0.bin" | sha256sum -c - >/dev/null 2>&1; then
+  pass "whisper model (medium-q8_0) sha256 OK"
+else
+  fail "whisper model" "missing or sha256 mismatch at /opt/whisper/models/ggml-medium-q8_0.bin"
+fi
+
 # ============================================================================
 echo -e "\n${BOLD}[Versions]${RESET}"
 check_version "ffmpeg" ffmpeg -version
 check_version "ffmpeg-static" /opt/ffmpeg-static/bin/ffmpeg -version
 check_version "SvtAv1EncApp" SvtAv1EncApp --help
 check_version "av1an" av1an --version
+check_version "whisper-cli" whisper-cli --version
 check_version "vspipe" vspipe --version
 
 # ============================================================================
@@ -179,6 +189,22 @@ if av-scenechange "$WORKDIR/test.mp4" -o "$WORKDIR/out_scenechange.json" 2>/dev/
   check_functional "av-scenechange detection" "$WORKDIR/out_scenechange.json"
 else
   fail "av-scenechange" "detection failed"
+fi
+
+# whisper language detection (16kHz mono wav, GPU auto-select with CPU fallback)
+WHISPER_MODEL="${WHISPER_MODEL:-/opt/whisper/models/ggml-medium-q8_0.bin}"
+ffmpeg -v error -i "$WORKDIR/test.mp4" -ar 16000 -ac 1 -y "$WORKDIR/tone.wav"
+whisper_out=$(timeout 180 whisper-cli -m "$WHISPER_MODEL" -dl "$WORKDIR/tone.wav" 2>&1)
+whisper_rc=$?
+if [ "$whisper_rc" -eq 0 ]; then
+  if echo "$whisper_out" | grep -q "auto-detected language: [a-z]"; then
+    detected=$(echo "$whisper_out" | grep -o "auto-detected language: [a-z]*" | head -1 | awk '{print $NF}')
+    pass "whisper language detection (${detected})"
+  else
+    fail "whisper language detection" "no 'auto-detected language' in output"
+  fi
+else
+  fail "whisper language detection" "exit code $whisper_rc"
 fi
 
 # ============================================================================
