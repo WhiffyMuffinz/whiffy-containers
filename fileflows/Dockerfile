@@ -13,7 +13,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
     apt-get update && \
     apt-get install -y sudo tzdata wget ca-certificates gnupg curl tar xz-utils zstd libssl-dev apt-transport-https openssl locales libfontconfig1 libfreetype6 pciutils vainfo git cmake llvm \
-    build-essential autoconf automake libtool pkg-config nasm meson ninja-build python3-dev python3-venv python3-setuptools python3-pip libvulkan1 libvulkan-dev mesa-vulkan-drivers libavformat-dev libavfilter-dev libavdevice-dev libavcodec-dev libswscale-dev libxxhash-dev clang libffms2-dev
+    build-essential autoconf automake libtool pkg-config nasm meson ninja-build python3-dev python3-venv python3-setuptools python3-pip libvulkan1 libvulkan-dev mesa-vulkan-drivers spirv-headers glslc libavformat-dev libavfilter-dev libavdevice-dev libavcodec-dev libswscale-dev libxxhash-dev clang libffms2-dev
 
 ENV PKG_CONFIG_PATH="/usr/local/lib/pkgconfig"
 ENV CFLAGS="-O3 -march=x86-64-v3"
@@ -25,7 +25,7 @@ ENV CXXFLAGS="-O3 -march=x86-64-v3"
 # Install Rust (needed for Av1an)
 COPY --from=rust /usr/local/cargo /usr/local/cargo
 COPY --from=rust /usr/local/rustup /usr/local/rustup
-RUN /usr/local/cargo/bin/rustup default stable
+ENV RUSTUP_HOME=/usr/local/rustup
 ENV PATH="/usr/local/cargo/bin:${PATH}"
 
 # Install wild linker and sccache for Rust
@@ -104,6 +104,27 @@ RUN git clone --depth 1 --branch ${SVT_VERSION} https://gitlab.com/AOMediaCodec/
     mkdir -p /usr/local/bin && \
     if [ -f /tmp/svt-av1/Bin/Release/SvtAv1EncApp ]; then cp /tmp/svt-av1/Bin/Release/SvtAv1EncApp /usr/local/bin/; fi && \
     rm -rf /tmp/svt-av1
+
+# --- Stage: whisper.cpp (Vulkan) ---
+FROM base AS whisper-cpp
+# renovate: datasource=github-tags depName=ggml-org/whisper.cpp versioning=semver
+ARG WHISPER_VERSION=v1.9.4
+RUN git clone --depth 1 --branch ${WHISPER_VERSION} https://github.com/ggml-org/whisper.cpp /tmp/whisper.cpp && \
+    cd /tmp/whisper.cpp && \
+    cmake -B build -DCMAKE_BUILD_TYPE=Release -DGGML_VULKAN=ON -DWHISPER_BUILD_EXAMPLES=ON -DWHISPER_BUILD_TESTS=OFF -DWHISPER_BUILD_IS_DEV=OFF -DBUILD_SHARED_LIBS=OFF && \
+    cmake --build build --target whisper-cli -j$(nproc) && \
+    install -m 0755 build/bin/whisper-cli /usr/local/bin/whisper-cli && \
+    rm -rf /tmp/whisper.cpp
+
+# --- Stage: whisper model (independent of base; only needs a downloader) ---
+FROM docker.io/alpine:3.24@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6 AS whisper-model
+ARG WHISPER_MODEL_SHA256=42a1ffcbe4167d224232443396968db4d02d4e8e87e213d3ee2e03095dea6502
+ARG WHISPER_MODEL_URL=https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-medium-q8_0.bin
+RUN mkdir -p /opt/whisper/models && \
+    (for i in 1 2 3; do \
+        wget -q -T 60 "${WHISPER_MODEL_URL}" -O /opt/whisper/models/ggml-medium-q8_0.bin && break || { [ "$i" = 3 ] && exit 1; sleep 5; }; \
+    done) && \
+    echo "${WHISPER_MODEL_SHA256}  /opt/whisper/models/ggml-medium-q8_0.bin" | sha256sum -c -
 
 # --- Stage: av-scenechange ---
 FROM base AS av-scenechange
@@ -227,6 +248,8 @@ COPY --from=dovi-tool /usr/local/bin/dovi_tool /usr/local/bin/dovi_tool
 COPY --from=svt-av1 /usr/local/bin/SvtAv1EncApp /usr/local/bin/SvtAv1EncApp
 COPY --from=av1an /usr/local/bin/av1an /usr/local/bin/av1an
 COPY --from=av-scenechange /usr/local/bin/av-scenechange /usr/local/bin/av-scenechange
+COPY --from=whisper-cpp /usr/local/bin/whisper-cli /usr/local/bin/whisper-cli
+COPY --from=whisper-model /opt/whisper /opt/whisper
 COPY --from=vapoursynth /usr/local/bin/vspipe /usr/local/bin/vspipe
 COPY --from=vapoursynth /usr/local/bin/vapoursynth /usr/local/bin/vapoursynth
 
@@ -275,9 +298,15 @@ ENV DOTNET_CLI_TELEMETRY_OPTOUT=true
 ENV VAPOURSYNTH_EXTRA_PLUGIN_PATH=/usr/local/lib/vapoursynth
 # Add BtbN FFmpeg to PATH (after /usr/local/bin so Jellyfin version is default)
 ENV PATH=/dotnet:/dotnet/tools:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/opt/ffmpeg-static/bin
+# Default whisper.cpp model (language detection)
+ENV WHISPER_MODEL=/opt/whisper/models/ggml-medium-q8_0.bin
 
 # Copy application code from the appdata stage
 COPY --from=revenz/fileflows:26.09@sha256:1f412e4e2b411a18d25538095629ef870185ea602f9840caab06088dec8231ae /app /app
+
+# whisper-cli path is for the script to detect like it's from the dockermod
+RUN mkdir -p /app/common/whisper && \
+    ln -s /usr/local/bin/whisper-cli /app/common/whisper/whisper-cli
 
 # Make entrypoint script executable
 RUN chmod +x /app/docker-entrypoint.sh
