@@ -13,7 +13,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
     apt-get update && \
     apt-get install -y sudo tzdata wget ca-certificates gnupg curl tar xz-utils zstd libssl-dev apt-transport-https openssl locales libfontconfig1 libfreetype6 pciutils vainfo git cmake llvm \
-    build-essential autoconf automake libtool pkg-config nasm meson ninja-build python3-dev python3-venv python3-setuptools python3-pip libvulkan1 libvulkan-dev mesa-vulkan-drivers libavformat-dev libavfilter-dev libavdevice-dev libavcodec-dev libswscale-dev libxxhash-dev clang libffms2-dev
+    build-essential autoconf automake libtool pkg-config nasm meson ninja-build python3-dev python3-venv python3-setuptools python3-pip libvulkan1 libvulkan-dev mesa-vulkan-drivers spirv-headers glslc libavformat-dev libavfilter-dev libavdevice-dev libavcodec-dev libswscale-dev libxxhash-dev clang libffms2-dev
 
 ENV PKG_CONFIG_PATH="/usr/local/lib/pkgconfig"
 ENV CFLAGS="-O3 -march=x86-64-v3"
@@ -111,11 +111,6 @@ FROM base AS whisper-cpp
 ARG WHISPER_VERSION=v1.9.4
 ARG WHISPER_MODEL_SHA256=42a1ffcbe4167d224232443396968db4d02d4e8e87e213d3ee2e03095dea6502
 ARG WHISPER_MODEL_URL=https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-medium-q8_0.bin
-RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
-    --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
-    apt-get update && \
-    apt-get install -y --no-install-recommends spirv-headers glslc && \
-    rm -rf /var/lib/apt/lists/*
 RUN git clone --depth 1 --branch ${WHISPER_VERSION} https://github.com/ggml-org/whisper.cpp /tmp/whisper.cpp && \
     cd /tmp/whisper.cpp && \
     cmake -B build -DCMAKE_BUILD_TYPE=Release -DGGML_VULKAN=ON -DWHISPER_BUILD_EXAMPLES=ON -DWHISPER_BUILD_TESTS=OFF -DWHISPER_BUILD_IS_DEV=OFF -DBUILD_SHARED_LIBS=OFF && \
