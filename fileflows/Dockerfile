@@ -25,7 +25,7 @@ ENV CXXFLAGS="-O3 -march=x86-64-v3"
 # Install Rust (needed for Av1an)
 COPY --from=rust /usr/local/cargo /usr/local/cargo
 COPY --from=rust /usr/local/rustup /usr/local/rustup
-RUN /usr/local/cargo/bin/rustup default stable
+ENV RUSTUP_HOME=/usr/local/rustup
 ENV PATH="/usr/local/cargo/bin:${PATH}"
 
 # Install wild linker and sccache for Rust
@@ -109,17 +109,21 @@ RUN git clone --depth 1 --branch ${SVT_VERSION} https://gitlab.com/AOMediaCodec/
 FROM base AS whisper-cpp
 # renovate: datasource=github-tags depName=ggml-org/whisper.cpp versioning=semver
 ARG WHISPER_VERSION=v1.9.4
-ARG WHISPER_MODEL_SHA256=42a1ffcbe4167d224232443396968db4d02d4e8e87e213d3ee2e03095dea6502
-ARG WHISPER_MODEL_URL=https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-medium-q8_0.bin
 RUN git clone --depth 1 --branch ${WHISPER_VERSION} https://github.com/ggml-org/whisper.cpp /tmp/whisper.cpp && \
     cd /tmp/whisper.cpp && \
     cmake -B build -DCMAKE_BUILD_TYPE=Release -DGGML_VULKAN=ON -DWHISPER_BUILD_EXAMPLES=ON -DWHISPER_BUILD_TESTS=OFF -DWHISPER_BUILD_IS_DEV=OFF -DBUILD_SHARED_LIBS=OFF && \
     cmake --build build --target whisper-cli -j$(nproc) && \
     install -m 0755 build/bin/whisper-cli /usr/local/bin/whisper-cli && \
     rm -rf /tmp/whisper.cpp
+
+# --- Stage: whisper model (independent of base; only needs a downloader) ---
+FROM docker.io/alpine:3.24@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6 AS whisper-model
+ARG WHISPER_MODEL_SHA256=42a1ffcbe4167d224232443396968db4d02d4e8e87e213d3ee2e03095dea6502
+ARG WHISPER_MODEL_URL=https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-medium-q8_0.bin
 RUN mkdir -p /opt/whisper/models && \
-    wget -q --tries=3 --timeout=60 --retry-connrefused \
-        "${WHISPER_MODEL_URL}" -O /opt/whisper/models/ggml-medium-q8_0.bin && \
+    (for i in 1 2 3; do \
+        wget -q -T 60 "${WHISPER_MODEL_URL}" -O /opt/whisper/models/ggml-medium-q8_0.bin && break || { [ "$i" = 3 ] && exit 1; sleep 5; }; \
+    done) && \
     echo "${WHISPER_MODEL_SHA256}  /opt/whisper/models/ggml-medium-q8_0.bin" | sha256sum -c -
 
 # --- Stage: av-scenechange ---
@@ -245,7 +249,7 @@ COPY --from=svt-av1 /usr/local/bin/SvtAv1EncApp /usr/local/bin/SvtAv1EncApp
 COPY --from=av1an /usr/local/bin/av1an /usr/local/bin/av1an
 COPY --from=av-scenechange /usr/local/bin/av-scenechange /usr/local/bin/av-scenechange
 COPY --from=whisper-cpp /usr/local/bin/whisper-cli /usr/local/bin/whisper-cli
-COPY --from=whisper-cpp /opt/whisper /opt/whisper
+COPY --from=whisper-model /opt/whisper /opt/whisper
 COPY --from=vapoursynth /usr/local/bin/vspipe /usr/local/bin/vspipe
 COPY --from=vapoursynth /usr/local/bin/vapoursynth /usr/local/bin/vapoursynth
 
