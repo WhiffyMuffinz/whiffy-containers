@@ -111,7 +111,7 @@ FROM base AS whisper-cpp
 ARG WHISPER_VERSION=v1.9.4
 RUN git clone --depth 1 --branch ${WHISPER_VERSION} https://github.com/ggml-org/whisper.cpp /tmp/whisper.cpp && \
     cd /tmp/whisper.cpp && \
-    cmake -B build -DCMAKE_BUILD_TYPE=Release -DGGML_VULKAN=ON -DWHISPER_BUILD_EXAMPLES=ON -DWHISPER_BUILD_TESTS=OFF -DWHISPER_BUILD_IS_DEV=OFF -DBUILD_SHARED_LIBS=OFF && \
+    cmake -B build -DCMAKE_BUILD_TYPE=Release -DGGML_NATIVE=OFF -DGGML_VULKAN=ON -DWHISPER_BUILD_EXAMPLES=ON -DWHISPER_BUILD_TESTS=OFF -DWHISPER_BUILD_IS_DEV=OFF -DBUILD_SHARED_LIBS=OFF && \
     cmake --build build --target whisper-cli -j$(nproc) && \
     install -m 0755 build/bin/whisper-cli /usr/local/bin/whisper-cli && \
     rm -rf /tmp/whisper.cpp
