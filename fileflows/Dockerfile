@@ -263,8 +263,11 @@ COPY --from=vship /usr/local/lib/vapoursynth/ /usr/local/lib/vapoursynth/
 # Copy Python packages (VapourSynth bindings)
 COPY --from=vapoursynth /usr/local/lib/python3.14/dist-packages /usr/local/lib/python3.14/dist-packages
 
-# Configure VapourSynth runtime (maps all libvsscript load paths to this Python installation)
-RUN python3 - <<'EOF'
+# Configure VapourSynth runtime (maps all libvsscript load paths to this Python installation).
+# NOTE: keep all three keys: `vapoursynth config` only writes the dist-packages
+# path, but av1an loads libvsscript via /usr/local/lib and fails without those keys.
+# NOTE: ldconfig must run first so libzimg/libvapoursynth in /usr/local/lib are findable
+RUN ldconfig && python3 - <<'EOF'
 import os
 import sys
 from vapoursynth._utils import _find_python_symbol_path, _mangle_vsscript_key, _get_vapoursynth_config_path, _escape_toml_string
@@ -302,7 +305,7 @@ ENV PATH=/dotnet:/dotnet/tools:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin
 ENV WHISPER_MODEL=/opt/whisper/models/ggml-medium-q8_0.bin
 
 # Copy application code from the appdata stage
-COPY --from=revenz/fileflows:26.09@sha256:d5b19347d06baab77b9ede68196a66b9f9233b4ddf6c426c1764c523c3e1daf9 /app /app
+COPY --from=revenz/fileflows:26.09@sha256:1257d17cca6b2d4ca2ad2cb7ffcbffcd22f66741151a9f5e40b46f2b73efa316 /app /app
 
 # whisper-cli path is for the script to detect like it's from the dockermod
 RUN mkdir -p /app/common/whisper && \
