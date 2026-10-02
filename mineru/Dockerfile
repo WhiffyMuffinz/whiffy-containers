@@ -1,5 +1,5 @@
 
-FROM python:3.12-slim@sha256:dddfd7e07f9d15aeeca61529320492139d21cac7f0070c00609243e51e4e0016
+FROM python:3.14-slim@sha256:0741d101873c12ab927e6f8653feb8862b9bd58771177acb1b885b95141f91b4
 LABEL org.opencontainers.image.source=https://github.com/whiffymuffinz/whiffy-containers
 
 RUN apt-get update && \
