@@ -108,7 +108,7 @@ RUN git clone --depth 1 --branch ${SVT_VERSION} https://gitlab.com/AOMediaCodec/
 # --- Stage: whisper.cpp (Vulkan) ---
 FROM base AS whisper-cpp
 # renovate: datasource=github-tags depName=ggml-org/whisper.cpp versioning=semver
-ARG WHISPER_VERSION=v1.9.4
+ARG WHISPER_VERSION=v1.9.5
 RUN git clone --depth 1 --branch ${WHISPER_VERSION} https://github.com/ggml-org/whisper.cpp /tmp/whisper.cpp && \
     cd /tmp/whisper.cpp && \
     cmake -B build -DCMAKE_BUILD_TYPE=Release -DGGML_NATIVE=OFF -DGGML_VULKAN=ON -DWHISPER_BUILD_EXAMPLES=ON -DWHISPER_BUILD_TESTS=OFF -DWHISPER_BUILD_IS_DEV=OFF -DBUILD_SHARED_LIBS=OFF && \
