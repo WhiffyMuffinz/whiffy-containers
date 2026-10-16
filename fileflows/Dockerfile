@@ -311,6 +311,9 @@ COPY --from=revenz/fileflows:26.10@sha256:32ba325fd2aae42403f10b2775b2d45b6b7555
 RUN mkdir -p /app/common/whisper && \
     ln -s /usr/local/bin/whisper-cli /app/common/whisper/whisper-cli
 
+# makes entrypoint create a homedir for the fileflows user so dotnet can create its mutex or something
+RUN sed -i 's/useradd -r -u/useradd -r -m -u/' /app/docker-entrypoint.sh
+
 # Make entrypoint script executable
 RUN chmod +x /app/docker-entrypoint.sh
 
