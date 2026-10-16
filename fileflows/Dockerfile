@@ -62,6 +62,7 @@ RUN --mount=type=cache,target=/root/.cargo/registry,sharing=locked \
     cd /tmp/ab-av1 && \
     cargo rustc --release -- -C target-feature=+crt-static && \
     cp target/release/ab-av1 /usr/local/bin/ && \
+    strip --strip-all /usr/local/bin/ab-av1 && \
     chmod +x /usr/local/bin/ab-av1 && \
     rm -rf /tmp/ab-av1
 
@@ -76,6 +77,7 @@ RUN --mount=type=cache,target=/root/.cargo/registry,sharing=locked \
     cd /tmp/dovi_tool && \
     cargo rustc --release --no-default-features --features internal-font -- -C target-feature=+crt-static && \
     cp target/release/dovi_tool /usr/local/bin/ && \
+    strip --strip-all /usr/local/bin/dovi_tool && \
     chmod +x /usr/local/bin/dovi_tool && \
     rm -rf /tmp/dovi_tool
 
@@ -102,7 +104,7 @@ RUN git clone --depth 1 --branch ${SVT_VERSION} https://gitlab.com/AOMediaCodec/
     cd Build/linux && \
     ./build.sh release --enable-lto --enable-pgo -xi --disable-native && \
     mkdir -p /usr/local/bin && \
-    if [ -f /tmp/svt-av1/Bin/Release/SvtAv1EncApp ]; then cp /tmp/svt-av1/Bin/Release/SvtAv1EncApp /usr/local/bin/; fi && \
+    if [ -f /tmp/svt-av1/Bin/Release/SvtAv1EncApp ]; then cp /tmp/svt-av1/Bin/Release/SvtAv1EncApp /usr/local/bin/ && strip --strip-all /usr/local/bin/SvtAv1EncApp; fi && \
     rm -rf /tmp/svt-av1
 
 # --- Stage: whisper.cpp (Vulkan) ---
@@ -114,6 +116,7 @@ RUN git clone --depth 1 --branch ${WHISPER_VERSION} https://github.com/ggml-org/
     cmake -B build -DCMAKE_BUILD_TYPE=Release -DGGML_NATIVE=OFF -DGGML_VULKAN=ON -DWHISPER_BUILD_EXAMPLES=ON -DWHISPER_BUILD_TESTS=OFF -DWHISPER_BUILD_IS_DEV=OFF -DBUILD_SHARED_LIBS=OFF && \
     cmake --build build --target whisper-cli -j$(nproc) && \
     install -m 0755 build/bin/whisper-cli /usr/local/bin/whisper-cli && \
+    strip --strip-all /usr/local/bin/whisper-cli && \
     rm -rf /tmp/whisper.cpp
 
 # --- Stage: whisper model (independent of base; only needs a downloader) ---
@@ -137,6 +140,7 @@ RUN --mount=type=cache,target=/root/.cargo/registry,sharing=locked \
     cd /tmp/av-scenechange && \
     cargo build --release --features ffms2 && \
     cp target/release/av-scenechange /usr/local/bin/ && \
+    strip --strip-all /usr/local/bin/av-scenechange && \
     chmod +x /usr/local/bin/av-scenechange && \
     rm -rf /tmp/av-scenechange
 
@@ -160,6 +164,13 @@ RUN git clone --depth 1 --branch ${VAPOURSYNTH_VERSION} https://github.com/vapou
     ln -sf /usr/local/lib/python3.14/dist-packages/vapoursynth/libvsscript.so /usr/local/lib/libvapoursynth-script.so && \
     ldconfig && \
     rm -rf /tmp/vapoursynth
+# Drop build-time-only files so they don't leak into the final image via COPY.
+# (Separate RUN for clarity; this is a builder stage so the extra layer costs
+# nothing in the final image.)
+RUN pip uninstall -y cython --break-system-packages && \
+    rm -rf /usr/local/lib/python3.14/dist-packages/Cython* /usr/local/lib/python3.14/dist-packages/cython* /usr/local/lib/python3.14/dist-packages/pyximport* && \
+    find /usr/local/lib/python3.14/dist-packages -name '__pycache__' -type d -exec rm -rf {} + 2>/dev/null || true; \
+    rm -f /usr/local/lib/*.a /usr/local/lib/*.la
 
 # --- Stage: BestSource (depends on vapoursynth) ---
 FROM vapoursynth AS bestsource
@@ -200,6 +211,7 @@ RUN --mount=type=cache,target=/root/.cargo/registry,sharing=locked \
     export VAPOURSYNTH_LIB_DIR="/usr/local/lib" && \
     cargo build --release && \
     cp target/release/av1an /usr/local/bin/ && \
+    strip --strip-all /usr/local/bin/av1an && \
     chmod +x /usr/local/bin/av1an && \
     rm -rf /tmp/Av1an
 
@@ -215,10 +227,10 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
     apt-get update && \
     apt-get install -y --no-install-recommends \
-    wget curl gnupg ca-certificates python3 libpython3.14 libffms2-5 libgomp1 rar unrar imagemagick mkvtoolnix libegl1 libvulkan1 libvulkan-dev mesa-vulkan-drivers && \
+    wget curl gnupg ca-certificates python3 libpython3.14 libffms2-5 libgomp1 rar unrar imagemagick mkvtoolnix libegl1 libvulkan1 mesa-vulkan-drivers && \
     mkdir -p /usr/local/lib/vapoursynth && \
     ln -s /usr/lib/x86_64-linux-gnu/libffms2.so.5 /usr/local/lib/vapoursynth/libffms2.so && \
-    rm -rf /tmp/* /var/tmp/*
+    rm -rf /tmp/* /var/tmp/* /usr/share/doc/* /usr/share/man/* /var/log/*
 
 COPY --from=mcr.microsoft.com/dotnet/aspnet:10.0@sha256:d5633778c754e89a386882eddf8dbee6942447a8a4b8267c19cf1e1158d0b0ac /usr/share/dotnet /dotnet
 
@@ -231,10 +243,13 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     echo "deb [arch=$(dpkg --print-architecture)] https://repo.jellyfin.org/ubuntu $(awk -F'=' '/^VERSION_CODENAME=/{ print $NF }' /etc/os-release) main" | tee /etc/apt/sources.list.d/jellyfin.list && \
     apt-get update && \
     apt-get install -y jellyfin-ffmpeg8 && \
+    rm -rf /tmp/* /var/tmp/* /usr/share/doc/* /usr/share/man/* /var/log/* && \
     ln -s /usr/lib/jellyfin-ffmpeg/ffmpeg /usr/local/bin/ffmpeg && \
     ln -s /usr/lib/jellyfin-ffmpeg/ffprobe /usr/local/bin/ffprobe
 
-COPY --from=ffmpeg-static /opt/ffmpeg-static /opt/ffmpeg-static
+# Only bin/ffmpeg is used at runtime 
+COPY --from=ffmpeg-static /opt/ffmpeg-static/bin/ffmpeg /opt/ffmpeg-static/bin/ffmpeg
+COPY --from=ffmpeg-static /opt/ffmpeg-static/presets /opt/ffmpeg-static/presets
 COPY --from=ab-av1 /usr/local/bin/ab-av1 /usr/local/bin/ab-av1 
 # ab-av1 path is for the script to detect like it's from the dockermod
 RUN mkdir -p /app/common/ab-av1 && \
@@ -260,8 +275,8 @@ COPY --from=bestsource /usr/local/lib/python3/dist-packages/vapoursynth/plugins/
 # Copy Vship VapourSynth plugins
 COPY --from=vship /usr/local/lib/vapoursynth/ /usr/local/lib/vapoursynth/
 
-# Copy Python packages (VapourSynth bindings)
-COPY --from=vapoursynth /usr/local/lib/python3.14/dist-packages /usr/local/lib/python3.14/dist-packages
+# Copy Python packages (VapourSynth bindings; already covered by the /usr/local/lib
+# copy above, which includes the python3.14 dist-packages)
 
 # Configure VapourSynth runtime (maps all libvsscript load paths to this Python installation).
 # NOTE: keep all three keys: `vapoursynth config` only writes the dist-packages
