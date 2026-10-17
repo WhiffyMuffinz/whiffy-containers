@@ -320,7 +320,7 @@ ENV PATH=/dotnet:/dotnet/tools:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin
 ENV WHISPER_MODEL=/opt/whisper/models/ggml-medium-q8_0.bin
 
 # Copy application code from the appdata stage
-COPY --from=revenz/fileflows:26.10@sha256:32ba325fd2aae42403f10b2775b2d45b6b75555d7ad84426287b6bf2e2ca68c1 /app /app
+COPY --from=revenz/fileflows:26.10@sha256:b35d2ed5e725ec74b4ead73eaae062bd9fa57837d2bce7fda85192b91af5d562 /app /app
 
 # whisper-cli path is for the script to detect like it's from the dockermod
 RUN mkdir -p /app/common/whisper && \
