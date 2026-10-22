@@ -120,7 +120,7 @@ RUN git clone --depth 1 --branch ${WHISPER_VERSION} https://github.com/ggml-org/
     rm -rf /tmp/whisper.cpp
 
 # --- Stage: whisper model (independent of base; only needs a downloader) ---
-FROM docker.io/alpine:3.24@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6 AS whisper-model
+FROM docker.io/alpine:3.24@sha256:71e9b7bae160ba167fa17414401b94cbcdaf3c32feeab9298bd794a2a0614c35 AS whisper-model
 ARG WHISPER_MODEL_SHA256=42a1ffcbe4167d224232443396968db4d02d4e8e87e213d3ee2e03095dea6502
 ARG WHISPER_MODEL_URL=https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-medium-q8_0.bin
 RUN mkdir -p /opt/whisper/models && \
