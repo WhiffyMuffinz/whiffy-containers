@@ -1,15 +1,5 @@
 /**
- * Automatically generates chapters by analyzing the video for scene changes using av-scenechange,
- * and adds them to the FFmpeg Builder model (same mechanism as the built-in Auto Chapters node).
- *
- * Requires a "av-scenechange" Tool to be configured in FileFlows (Settings > Tools) pointing to
- * the av-scenechange binary.
- *
- * Must be used inside an FFmpeg Builder flow, after "FFmpeg Builder: Start".
- *
- * @author ClaudeAI
- * @version 1.0.0
- * @help Detects scene changes using av-scenechange and adds them as chapters to the FFmpeg Builder.
+ * @description Automatically generates chapters by analyzing the video for scene changes using av-scenechange, and adds them to the FFmpeg Builder model (same mechanism as the built-in Auto Chapters node). Pipes via ffmpeg (yuv4mpegpipe) and downscales >1080p sources to 720p with lanczos for faster detection. Requires a "av-scenechange" Tool to be configured in FileFlows (Settings > Tools) pointing to the av-scenechange binary. Must be used inside an FFmpeg Builder flow, after "FFmpeg Builder: Start".
  * @param {string} ChapterNames Optional override for chapter names. Use {index} to insert the chapter number. e.g. "Chapter {index}"
  * @param {int} MinimumLength The minimum length of a chapter in seconds
  * @param {('0'|'1')} Speed Speed level for scene-change detection, 0: best quality, 1: fastest mode
@@ -17,10 +7,11 @@
  * @param {int} MinSceneCut Sets a minimum interval (in frames) between two consecutive scenecuts. 0 = not set
  * @param {int} MaxSceneCut Sets a maximum interval (in frames) between two consecutive scenecuts, after which a scenecut will be forced. 0 = not set
  * @param {bool} ReplaceExisting Whether existing chapters should be replaced. If disabled and chapters already exist, no new chapters will be added
+ * @param {bool} UseHwaccel Enable ffmpeg hardware-accelerated decoding via '-hwaccel auto' before the input. Disable if you hit hwdownload/scale filter errors.
  * @output Chapters were detected and added to the FFmpeg Builder
  * @output No chapters were detected or the video already contained chapters
  */
-function Script(ChapterNames, MinimumLength, Speed, NoFlashDetection, MinSceneCut, MaxSceneCut, ReplaceExisting)
+function Script(ChapterNames, MinimumLength, Speed, NoFlashDetection, MinSceneCut, MaxSceneCut, ReplaceExisting, UseHwaccel)
 {
     let model = Variables.FfmpegBuilderModel;
     if (!model)
@@ -73,40 +64,86 @@ function Script(ChapterNames, MinimumLength, Speed, NoFlashDetection, MinSceneCu
     let workDir = Flow.TempPath + '/av-scenechange-' + Flow.NewGuid();
     Flow.CreateDirectoryIfNotExists(workDir);
     let outputJson = workDir + '/scenechange.json';
-    let avScenechange = Flow.GetToolPath('av-scenechange');
+
+    // Tool lookup: prefer FileFlows Tools, fall back to well-known paths / PATH.
+    function getToolPath(name, fallback)
+    {
+        try { if (typeof Flow.GetToolPath === 'function') { let p = Flow.GetToolPath(name); if (p) return p; } } catch (e) {}
+        try { if (typeof Flow.GetToolExecutablePath === 'function') { let p = Flow.GetToolExecutablePath(name); if (p) return p; } } catch (e) {}
+        return fallback;
+    }
+    let ffmpeg = getToolPath('ffmpeg', 'ffmpeg');
+    let avScenechange = getToolPath('av-scenechange', '/usr/local/bin/av-scenechange');
     if (!avScenechange)
     {
         Logger.ELog('av-scenechange tool not configured. Add it under Settings > Tools.');
         return -1;
     }
 
-    let args = [ '-o', outputJson, '-s', '' + Speed ];
+    // Downscale rule: height > 1080 -> 720p. Width ignored (covers ultra-wide).
+    let srcW = videoStream.Width || videoStream.width || 0;
+    let srcH = videoStream.Height || videoStream.height || 0;
+    let needsScale = srcH > 1080;
+    Logger.ILog('Source resolution: ' + srcW + 'x' + srcH + ' -> ' + (needsScale ? 'downscaling to 720p (scale=-2:720:flags=lanczos)' : 'no scaling'));
+
+    // Toggle: ffmpeg -hwaccel auto -i ... (must precede -i)
+    let hwaccelOn = (UseHwaccel === true || UseHwaccel === 1 || UseHwaccel === '1' || ('' + UseHwaccel).toLowerCase() === 'true');
+    Logger.ILog('HWAccel: ' + (hwaccelOn ? 'enabled (-hwaccel auto)' : 'disabled'));
+
+    // av-scenechange args (stdin '-', stdout redirected to file — same fix as before
+    // so FileFlows never has to buffer large JSON in memory).
+    let scArgs = [ '-s', '' + Speed ];
     if (NoFlashDetection)
-        args.push('--no-flash-detection');
+        scArgs.push('--no-flash-detection');
     let minScenecut = parseInt('' + MinSceneCut, 10);
     if (minScenecut > 0)
-        args.push('--min-scenecut', '' + minScenecut);
+        scArgs.push('--min-scenecut', '' + minScenecut);
     let maxScenecut = parseInt('' + MaxSceneCut, 10);
     if (maxScenecut > 0)
-        args.push('--max-scenecut', '' + maxScenecut);
-    args.push(inputFile);
+        scArgs.push('--max-scenecut', '' + maxScenecut);
+    scArgs.push('-'); // stdin (yuv4mpegpipe)
 
-    Logger.ILog('Running av-scenechange: ' + avScenechange + ' ' + args.join(' '));
+    // ffmpeg args: decode (+ optional hwaccel/scale) -> yuv4mpegpipe on stdout.
+    // -pix_fmt yuv420p keeps the pipe 8-bit/fast; 10-bit sources are detected in 8-bit (fine for cuts).
+    let ffArgs = [ '-hide_banner', '-loglevel', 'error' ];
+    if (hwaccelOn)
+        ffArgs.push('-hwaccel', 'auto');
+    ffArgs.push('-i', inputFile);
+    if (needsScale)
+        ffArgs.push('-vf', 'scale=-2:720:flags=lanczos');
+    ffArgs.push('-pix_fmt', 'yuv420p', '-f', 'yuv4mpegpipe', '-');
+
+    // Simple POSIX-shell quoting so paths/args with spaces or special characters
+    // survive being passed through `bash -c`.
+    function shellQuote(value)
+    {
+        return "'" + ('' + value).replace(/'/g, "'\\''") + "'";
+    }
+
+    let shellCommand = shellQuote(ffmpeg) + ' ' +
+        ffArgs.map(shellQuote).join(' ') +
+        ' | ' + shellQuote(avScenechange) + ' ' +
+        scArgs.map(shellQuote).join(' ') +
+        ' > ' + shellQuote(outputJson);
+
+    Logger.ILog('Running ffmpeg | av-scenechange via shell redirection: ' + shellCommand);
 
     let process = Flow.Execute({
-        command: avScenechange,
-        argumentList: args
+        command: '/bin/bash',
+        argumentList: [ '-c', shellCommand ]
     });
 
-    Logger.ILog('av-scenechange exit code: ' + process.exitCode);
+    Logger.ILog('pipeline exit code: ' + process.exitCode);
     if (process.standardOutput)
-        Logger.ILog('av-scenechange output: ' + process.standardOutput);
+        Logger.ILog('pipeline output: ' + process.standardOutput);
     if (process.standardError)
-        Logger.ILog('av-scenechange stderr: ' + process.standardError);
+        Logger.ILog('pipeline stderr: ' + process.standardError);
 
     if (process.exitCode !== 0)
     {
-        Logger.ELog('av-scenechange failed with exit code: ' + process.exitCode);
+        Logger.ELog('ffmpeg|av-scenechange pipeline failed with exit code: ' + process.exitCode);
+        if (hwaccelOn)
+            Logger.ELog('Hint: retry with UseHwaccel off — some builds need hwdownload before the software scale filter.');
         return -1;
     }
 
@@ -199,17 +236,13 @@ function Script(ChapterNames, MinimumLength, Speed, NoFlashDetection, MinSceneCu
     Logger.ILog('Auto Chapters File:');
     Logger.ILog(metadataContent);
 
-    if (!model.InputFiles)
-        model.InputFiles = [];
     if (!model.CustomParameters)
         model.CustomParameters = [];
 
-    model.InputFiles.push(metadataFile);
-    let inputIndex = model.InputFiles.length - 1;
-    model.CustomParameters.push('-map_chapters');
-    model.CustomParameters.push('' + inputIndex);
+    let inputIndex = model.InputFiles ? model.InputFiles.length : 0;
+    model.CustomParameters.push('-i', metadataFile, '-map_chapters', '' + inputIndex);
 
-    Logger.ILog('Added ' + starts.length + ' chapter(s) to the FFmpeg Builder using input index ' + inputIndex);
+    Logger.ILog('Added ' + starts.length + ' chapter(s) to the FFmpeg Builder ');
 
     return 1;
 }
