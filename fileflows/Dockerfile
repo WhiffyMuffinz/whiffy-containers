@@ -200,7 +200,7 @@ RUN git clone --depth 1 --branch ${VSHIP_VERSION} https://codeberg.org/Line-fr/V
 # --- Stage: Av1an (depends on Rust + VapourSynth) ---
 FROM vapoursynth AS av1an
 # renovate: datasource=github-tags depName=master-of-zen/Av1an versioning=semver-coerced
-ARG AV1AN_VERSION=v0.5.2
+ARG AV1AN_VERSION=v0.6.0
 RUN --mount=type=cache,target=/root/.cargo/registry,sharing=locked \
     --mount=type=cache,target=/root/.cargo/git,sharing=locked \
     --mount=type=cache,target=/root/.cache/sccache,sharing=locked \
