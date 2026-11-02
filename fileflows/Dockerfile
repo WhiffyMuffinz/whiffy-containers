@@ -98,7 +98,7 @@ RUN git clone --depth 1 --branch ${ZIMG_VERSION} https://github.com/sekrit-twc/z
 # --- Stage: svt-av1 ---
 FROM base AS svt-av1
 # renovate: datasource=gitlab-releases depName=AOMediaCodec/SVT-AV1 versioning=semver-coerced
-ARG SVT_VERSION=v4.2.0
+ARG SVT_VERSION=v4.3.0
 RUN git clone --depth 1 --branch ${SVT_VERSION} https://gitlab.com/AOMediaCodec/SVT-AV1/ /tmp/svt-av1 && \
     cd /tmp/svt-av1 && \
     cd Build/linux && \
