@@ -4,7 +4,7 @@
 # SHARED BASE STAGE - Common build dependencies
 # ============================================================================
 FROM rust:1.99@sha256:8a4e90c7946b74626488b1446f712c0fe0ed1a596cbd3d871684bc9c5433ae07 AS rust
-FROM docker.io/ubuntu:26.04@sha256:6a06111c3b0a8600feadb270aec771dc239bf407b25625f93f44ab00e11f4d3c AS base
+FROM docker.io/ubuntu:26.04@sha256:065aa8626841f16057b78b027b464cd59c4fac36c204c72dcbf48d66f5fa8a96 AS base
 
 ARG DEBIAN_FRONTEND=noninteractive
 
@@ -218,7 +218,7 @@ RUN --mount=type=cache,target=/root/.cargo/registry,sharing=locked \
 # ============================================================================
 # FINAL RUNTIME STAGE
 # ============================================================================
-FROM docker.io/ubuntu:26.04@sha256:6a06111c3b0a8600feadb270aec771dc239bf407b25625f93f44ab00e11f4d3c  AS final
+FROM docker.io/ubuntu:26.04@sha256:065aa8626841f16057b78b027b464cd59c4fac36c204c72dcbf48d66f5fa8a96  AS final
 
 ARG DEBIAN_FRONTEND=noninteractive
 
