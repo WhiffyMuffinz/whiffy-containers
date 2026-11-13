@@ -3,7 +3,7 @@
 # ============================================================================
 # SHARED BASE STAGE - Common build dependencies
 # ============================================================================
-FROM rust:1.99@sha256:8a4e90c7946b74626488b1446f712c0fe0ed1a596cbd3d871684bc9c5433ae07 AS rust
+FROM rust:1.100@sha256:e19840879045c951c905d0eaa9887f3439c62000e429963371b376bac8d38c31 AS rust
 FROM docker.io/ubuntu:26.04@sha256:065aa8626841f16057b78b027b464cd59c4fac36c204c72dcbf48d66f5fa8a96 AS base
 
 ARG DEBIAN_FRONTEND=noninteractive
