@@ -54,7 +54,7 @@ RUN mkdir -p /opt/ffmpeg-static && \
 # --- Stage: ab-av1 ---
 FROM base AS ab-av1
 # renovate: datasource=github-tags depName=alexheretic/ab-av1 versioning=semver-coerced
-ARG AB_AV1_VERSION=v0.11.7
+ARG AB_AV1_VERSION=v0.12.0
 RUN --mount=type=cache,target=/root/.cargo/registry,sharing=locked \
     --mount=type=cache,target=/root/.cargo/git,sharing=locked \
     --mount=type=cache,target=/root/.cache/sccache,sharing=locked \
